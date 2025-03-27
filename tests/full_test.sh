@@ -16,9 +16,9 @@ fi
 echo "[+] local pytest"
 pytest -v && \
 cd vagrant && \
-echo "[+] remote pytest" && \
+echo "[+] remote pytest (vagrant)" && \
 vagrant ssh -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked" && \
-echo "[+] testinfra" && \
+echo "[+] testinfra (vagrant)" && \
 pytest -v --hosts=vagrant-satfs --ssh-config=<(vagrant ssh-config)
 
 status=$?
