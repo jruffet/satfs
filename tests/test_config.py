@@ -48,6 +48,8 @@ def test_config_section(setup):
     assert config.name == conf_yml["config"].get("name", None)
     assert config.enforce == conf_yml["config"].get("enforce", None)
     assert config.inherit_rules == conf_yml["config"].get("inherit_rules", None)
+    assert config.ask_cache_ttl == conf_yml["config"].get("ask_cache_ttl", None)
+    assert config.ask_dialog_timeout == conf_yml["config"].get("ask_dialog_timeout", None)
     assert config.log_level == logging.INFO
     assert config.log_level_deny_list_entry == logging.WARNING
     assert config.errno == -fuse.EPERM

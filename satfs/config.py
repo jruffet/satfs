@@ -51,6 +51,7 @@ def validate_config_section(config_section: Dict) -> None:
         "log_level": {"restrict": satlog.LOG_LEVELS.keys(), "type": str},
         "log_level_deny_list_entry": {"restrict": satlog.LOG_LEVELS.keys(), "type": str},
         "ask_cache_ttl": {"restrict": None, "type": int},
+        "ask_dialog_timeout": {"restrict": None, "type": int},
     }
 
     assert "name" in config_section, "'config' section must be present, with 'name' defined"
@@ -160,6 +161,7 @@ class Config:
         self.log_level_deny_list_entry = 0
         self.ask_cache = TTLCache()
         self.ask_cache_ttl = 10
+        self.ask_dialog_timeout = 10
         self.errno = -fuse.EPERM
 
         self.rules = []
@@ -251,7 +253,8 @@ class Config:
         next_self["name"] = config_section["name"]
         next_self["enforce"] = config_section.get("enforce", True)
         next_self["inherit_rules"] = config_section.get("inherit_rules", True)
-        next_self["ask_cache_ttl"] = config_section.get("ask_cache_ttl", 10)
+        next_self["ask_cache_ttl"] = int(config_section.get("ask_cache_ttl", 10))
+        next_self["ask_dialog_timeout"] = int(config_section.get("ask_dialog_timeout", 10))
         next_self["errno"] = -fuse.EPERM
 
         next_self["log_level"] = satlog.log_level(

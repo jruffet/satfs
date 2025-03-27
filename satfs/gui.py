@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import signal
 from .config import config
 from .process import set_privileges
 
@@ -20,6 +21,7 @@ class DesktopAdapter:
         os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
         os.environ["XDG_RUNTIME_DIR"] = f"/run/user/{config.uid}"
         set_privileges(uid=config.uid, gid=config.gid, caps=[], clear_groups=True)
+        signal.alarm(config.ask_dialog_timeout)
 
     def ask_user(self, title: str, msg: str) -> bool:
         kdialog = "/usr/bin/kdialog"

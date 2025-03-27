@@ -6,6 +6,8 @@ config:
   log_level_deny_list_entry: WARNING
   enforce: true
   inherit_rules: true
+  ask_cache_ttl: 3
+  ask_dialog_timeout: 20
 
 init_paths:
   names:
