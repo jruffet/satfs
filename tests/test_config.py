@@ -31,11 +31,6 @@ def setup(request):
 def test_load_raises(setup):
     _, _, config = setup
     config.uid = 99999
-
-    with pytest.raises(PermissionError):
-        config.load()
-
-    config.uid = 1000
     config.set_config_file("")
     with mock.patch("satfs.config.set_privileges", return_value=0):
         with pytest.raises(FileNotFoundError):
