@@ -88,7 +88,7 @@ Run `satfs` in the foreground (with `-f`) or background (without).
 
 Logs go to stderr (if in foreground) and journald. Log level is adjusted in the configuration file.
 
-The filesystem is mounted with provided `fsuid`/`fsgid` and configuration file.
+The filesystem is mounted with provided `uid`/`gid` and configuration file.
 
 The following FUSE options are enforced:
 
@@ -99,7 +99,7 @@ The following FUSE options are enforced:
 
 Example on how to run SatFS:
 ```sh
-sudo satfs -f -o fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml mountpoint
+sudo satfs -f -o uid=1000,gid=1000,conf=/path/to/your_conf.yml mountpoint
 ```
 
 This will use UID/GID 1000 to access `mountpoint`, and apply the given configuration
@@ -109,14 +109,14 @@ This will use UID/GID 1000 to access `mountpoint`, and apply the given configura
 To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount satfs early):
 
 ```fstab
-none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml 0 0
+none /mountpoint fuse.satfs noauto,uid=1000,gid=1000,conf=/path/to/your_conf.yml 0 0
 ```
 
 
 ## Threat Model & Caveats
 
 This filesystem is designed to restrict access to private documents from unauthorized (non-root) applications.
-To prevent being abused (e.g., being killed by same UID, non-privileged user), it must be started as root. It drops all capabilities except `CAP_SETUID`, `CAP_SETGID`, and `CAP_SYS_PTRACE` (the latter being used with `readlink()` to resolve `/proc/PID/exe`).
+To prevent being abused (e.g., being killed by same UID, non-privileged user), it must be started as root. It drops all capabilities except `CAP_SETUID`, `CAP_SETGID`, and `CAP_SYS_PTRACE` (the latter being used with `readlink()` to resolve `/proc/PID/exe`). It also drop privileges (EUID and FSUID) to the uid given on the command line (same for EGID/FSGID and gid).
 
 It should not be considered a bulletproof security solution by any means and has several limitations:
 

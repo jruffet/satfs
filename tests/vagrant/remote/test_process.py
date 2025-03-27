@@ -43,16 +43,16 @@ def test_mnt_ns():
     assert is_mount_private("/"), "Mount point '/' should be private"
 
 
-def validate_privileges(uid, gid, fsuid, fsgid, caps):
-    assert os.getuid() == uid, f"Expected UID {uid} but got {os.getuid()}"
-    assert os.getgid() == gid, f"Expected GID {gid} but got {os.getgid()}"
+def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
+    assert os.getresuid() == (ruid, euid, suid)
+    assert os.getresgid() == (rgid, egid, sgid)
 
     pid = os.getpid()
     with open(f"/proc/{pid}/status") as f:
         pid_status = f.readlines()
         # real, effective, saved, FS
-        assert f"Uid:\t{uid}\t{uid}\t{uid}\t{fsuid}\n" in pid_status
-        assert f"Gid:\t{gid}\t{gid}\t{gid}\t{fsgid}\n" in pid_status
+        assert f"Uid:\t{ruid}\t{euid}\t{suid}\t{fsuid}\n" in pid_status
+        assert f"Gid:\t{rgid}\t{egid}\t{sgid}\t{fsgid}\n" in pid_status
 
     # Check that we have the caps requested
     lower_caps = [x.lower().replace("cap_", "") for x in caps]
@@ -67,34 +67,44 @@ def validate_privileges(uid, gid, fsuid, fsgid, caps):
 @pytest.mark.parametrize(
     "uid, gid, fsuid, fsgid, caps",
     [
-        (0, 0, 1000, 1000, ["CAP_SETUID", "CAP_SETGID", "CAP_SYS_PTRACE"]),
-        (0, 0, 0, 0, ["CAP_SETUID", "CAP_SETGID", "CAP_SYS_PTRACE"]),
+        (0, 0, 1000, 1000, ["CAP_SYS_PTRACE"]),
+        (0, 0, 0, 0, ["CAP_SYS_PTRACE"]),
         (999, 999, 999, 999, ["CAP_CHOWN"]),
     ],
 )
 def test_set_privileges(uid, gid, fsuid, fsgid, caps):
     process.set_privileges(uid=uid, gid=gid, fsuid=fsuid, fsgid=fsgid, caps=caps)
-    validate_privileges(uid=uid, gid=gid, fsuid=fsuid, fsgid=fsgid, caps=caps)
+    validate_privileges(
+        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=uid, egid=gid, fsuid=fsuid, fsgid=fsgid, caps=caps
+    )
 
 
 def test_set_privileges_multiple():
     satfs_caps = ["CAP_SETUID", "CAP_SETGID", "CAP_SYS_PTRACE"]
 
     # main.py
-    process.set_privileges(uid=0, gid=0, fsuid=1234, fsgid=1234, caps=satfs_caps)
-    validate_privileges(uid=0, gid=0, fsuid=1234, fsgid=1234, caps=satfs_caps)
+    process.set_privileges(euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps)
+    validate_privileges(
+        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps
+    )
 
     # config read
     process.set_privileges(fsuid=0, fsgid=0)
-    validate_privileges(uid=0, gid=0, fsuid=0, fsgid=0, caps=satfs_caps)
+    validate_privileges(
+        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=0, fsgid=0, caps=satfs_caps
+    )
 
     # finished reading config
-    process.set_privileges(fsuid=999, fsgid=999)
-    validate_privileges(uid=0, gid=0, fsuid=999, fsgid=999, caps=satfs_caps)
+    process.set_privileges(fsuid=1234, fsgid=1234)
+    validate_privileges(
+        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps
+    )
 
     # gui interactive dialog (after fork() in satfs)
-    process.set_privileges(uid=1000, gid=1000, caps=[])
-    validate_privileges(uid=1000, gid=1000, fsuid=1000, fsgid=1000, caps=[])
+    process.set_privileges(uid=1000, gid=1000, caps=[], clear_groups=True)
+    # check forked process
+    id = subprocess.run("id", capture_output=True)
+    assert id.stdout.strip() == b"uid=1000(vagrant) gid=1000(vagrant) groups=1000(vagrant)"
 
     # this should fail now that we are not root anymore
     with pytest.raises(PermissionError):
@@ -103,7 +113,9 @@ def test_set_privileges_multiple():
     with pytest.raises(PermissionError):
         process.set_privileges(fsuid=1234, fsgid=1234)
 
-    validate_privileges(uid=1000, gid=1000, fsuid=1000, fsgid=1000, caps=[])
+    validate_privileges(
+        ruid=1000, rgid=1000, suid=1000, sgid=1000, euid=1000, egid=1000, fsuid=1000, fsgid=1000, caps=[]
+    )
 
 
 def test_set_dumpable():

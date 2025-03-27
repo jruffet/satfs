@@ -35,17 +35,26 @@ def make_mount_private(target: str) -> None:
 def set_privileges(
     uid: Optional[int] = None,
     gid: Optional[int] = None,
+    euid: Optional[int] = None,
+    egid: Optional[int] = None,
     fsuid: Optional[int] = None,
     fsgid: Optional[int] = None,
     caps: Optional[List[str]] = None,
     clear_groups: Optional[int] = None,
 ) -> None:
 
-    if caps is not None and caps != []:
+    try:
         prctl.securebits.no_setuid_fixup = True
+    except PermissionError:
+        pass
 
     if clear_groups is not None:
         os.setgroups([])
+
+    if egid is not None:
+        os.setegid(egid)
+    if euid is not None:
+        os.seteuid(euid)
 
     if gid is not None:
         os.setgid(gid)

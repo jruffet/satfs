@@ -36,8 +36,6 @@ def main():
     server = SatFS(version="SatFS 0.1", dash_s_do="setsingle")
 
     server.parser.add_option(mountopt="conf", metavar="CONF_FILE", help="SatFS configuration file")
-    server.parser.add_option(mountopt="fsuid", metavar="UID", help="fsuid to use")
-    server.parser.add_option(mountopt="fsgid", metavar="GID", help="fsgid to use")
     # force mono-threaded for now, fuse.FuseGetContext() is not guaranteed to be exact otherwise
     server.parser.fuse.multithreaded = False
     server.parse(values=server, errex=1)
@@ -53,29 +51,38 @@ def main():
     if server.fuse_args.mount_expected():
         try:
             assert hasattr(server, "conf"), "Configuration file path must be specified"
-            assert hasattr(server, "fsuid"), "FSUID must be specified"
-            assert hasattr(server, "fsgid"), "FSGID must be specified"
-            assert int(server.fsuid) != 0, "FSUID must be non-root"
-            assert int(server.fsgid) != 0, "FSGID must be non-root"
+            assert "uid" in server.fuse_args.optdict, "UID must be specified"
+            assert "gid" in server.fuse_args.optdict, "GID must be specified"
+            assert server.fuse_args.optdict["uid"] != 0, "UID must be non-root"
+            assert server.fuse_args.optdict["gid"] != 0, "GID must be non-root"
         except AssertionError as e:
             fatal_exit(e)
 
         process.set_non_dumpable()
+
+        mountpoint = server.fuse_args.mountpoint
+
+        config.set_config_file(server.conf)
+        config.uid = int(server.fuse_args.optdict["uid"])
+        config.gid = int(server.fuse_args.optdict["gid"])
+        config.mountpoint = mountpoint
+
+        process.set_privileges(
+            euid=config.uid,
+            egid=config.gid,
+            fsuid=config.uid,
+            fsgid=config.gid,
+            clear_groups=True,
+        )
         # Ignore SIGINT (KeyboardInterrupt)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-        mountpoint = server.fuse_args.mountpoint
         if already_mounted(program_name, mountpoint):
             fatal_exit(f"{program_name} already mounted on {mountpoint}")
         # hide options from ps
         process.set_proc_title(f"{program_name} {mountpoint}")
 
         satlog.setup_logger(foreground=server.fuse_args.modifiers["foreground"])
-
-        config.set_config_file(server.conf)
-        config.uid = int(server.fsuid)
-        config.gid = int(server.fsgid)
-        config.mountpoint = mountpoint
 
         try:
             config.load()
@@ -96,12 +103,12 @@ def main():
                 # but that works only in foreground mode.
                 # In background mode we get forked, detached and chdir'ed by Fuse later
                 # This code keeps a reference we can later use to chdir() to.
+                # process.set_privileges(euid=0, egid=0)
                 process.create_mnt_ns()
                 assert (
                     parent_mnt_ns != process.get_current_mnt_ns()
                 ), "parent mnt ns == child mnt ns, this should not happen!"
                 process.make_mount_private("/")
-                process.set_privileges(clear_groups=True, caps=[])
                 os.write(write_fd, b"OK")
             except Exception as e:
                 error_msg = f"Error setting up mount namespace: {e}".encode()
@@ -129,10 +136,12 @@ def main():
             # used to kill the child later at fsinit() in Fuse code
             server.child_pid = child_pid
 
-        # keep UID/GID 0 to prevent non-priv to umount or SIGKILL us
+        # keep real/saved UID/GID to 0 to prevent non-priv to umount or SIGKILL us
         # keep CAP_SYS_PTRACE to be able to readlink() all /proc/PID/exe
         # keep CAP_SETUID to be able to setuid()/setfsuid() later on
         process.set_privileges(
+            euid=config.uid,
+            egid=config.gid,
             fsuid=config.uid,
             fsgid=config.gid,
             clear_groups=True,

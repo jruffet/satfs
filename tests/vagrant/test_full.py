@@ -5,7 +5,7 @@ import pytest
 uid, gid = 1000, 1000
 satfs_conf = "/etc/satfs/satfs-vagrant.yml"
 mountpoint = "/mnt/satfs"
-satfs_cmd = f"/vagrant/main.py -o fsuid={uid},fsgid={gid},conf={satfs_conf} {mountpoint}"
+satfs_cmd = f"/vagrant/main.py -o uid={uid},gid={gid},conf={satfs_conf} {mountpoint}"
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -49,8 +49,8 @@ def test_capabilities_and_perms(host):
 
         pid_status = host.file(f"/proc/{pid}/status").content_string
         # real, effective, saved, FS
-        assert "Uid:\t0\t0\t0\t1000" in pid_status
-        assert "Gid:\t0\t0\t0\t1000" in pid_status
+        assert "Uid:\t0\t1000\t0\t1000" in pid_status
+        assert "Gid:\t0\t1000\t0\t1000" in pid_status
 
 
 def test_fs_operations(host):
