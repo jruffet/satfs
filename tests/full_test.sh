@@ -15,8 +15,8 @@ fi
 # Run pytest locally + testinfra on vagrant for full test + remote tests "local to the vagrant box"
 pytest -v && \
 cd vagrant && \
-pytest -v --hosts=vagrant-satfs --ssh-config=<(vagrant ssh-config) && \
-vagrant ssh -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked"
+vagrant ssh -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked" && \
+pytest -v --hosts=vagrant-satfs --ssh-config=<(vagrant ssh-config)
 
 status=$?
 
