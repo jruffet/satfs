@@ -55,6 +55,7 @@ def main():
             assert "gid" in server.fuse_args.optdict, "GID must be specified"
             assert server.fuse_args.optdict["uid"] != 0, "UID must be non-root"
             assert server.fuse_args.optdict["gid"] != 0, "GID must be non-root"
+            assert server.fuse_args.mountpoint is not None, "Mountpoint not provided"
         except AssertionError as e:
             fatal_exit(e)
 
