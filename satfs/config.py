@@ -160,7 +160,7 @@ class Config:
         self.log_level = 0
         self.log_level_deny_list_entry = 0
         self.ask_cache = TTLCache()
-        self.ask_cache_ttl = 10
+        self.ask_cache_ttl = 1
         self.ask_dialog_timeout = 10
         self.errno = -fuse.EPERM
 

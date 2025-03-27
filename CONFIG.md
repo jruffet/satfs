@@ -25,7 +25,7 @@ The following defaults are used if a key is not provided:
 - **inherit_rules** (optional, boolean, default: `true`): Allows rules to be inherited.
 - **log_level** (optional, string, default: `"INFO"`): Sets the logging verbosity.
 - **log_level_deny_list_entry** (optional, string, default: `"DEBUG"`): Sets the logging level for denied list entries.
-- **ask_cache_ttl** (optional, integer, default: `10`): Cache time-to-live for interactive access prompts (in seconds). The cache key used by SatFS is `init path`+`PID`+`path`.
+- **ask_cache_ttl** (optional, integer, default: `1`): Cache time-to-live for interactive access prompts (in seconds). The cache key used by SatFS is `init path`+`PID`+`path`.
 - **ask_dialog_timeout** (optional, integer, default: `10`): Time in seconds before killing the dialog in interactive access prompts.
 
 Example with default values:
@@ -36,7 +36,7 @@ config:
   log_level_deny_list_entry: DEBUG
   enforce: true
   inherit_rules: true
-  ask_cache_ttl: 10
+  ask_cache_ttl: 1
   ask_dialog_timeout: 10
 ```
 
