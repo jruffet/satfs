@@ -13,9 +13,12 @@ if [ $keep_vagrant == false ]; then
 fi
 
 # Run pytest locally + testinfra on vagrant for full test + remote tests "local to the vagrant box"
+echo "[+] local pytest"
 pytest -v && \
 cd vagrant && \
+echo "[+] remote pytest" && \
 vagrant ssh -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked" && \
+echo "[+] testinfra" && \
 pytest -v --hosts=vagrant-satfs --ssh-config=<(vagrant ssh-config)
 
 status=$?
