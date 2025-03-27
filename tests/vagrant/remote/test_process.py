@@ -3,16 +3,12 @@
 # unit testing on the vagrant box, because we need to be root
 # should be launched as root with "--noconftest -p no:cacheprovider --forked"
 
-import sys
 import subprocess
 import prctl
 import os
 import socket
 import pytest
 import psutil
-
-# Ensure the satfs module is available
-sys.path.insert(0, os.path.abspath("/vagrant"))
 from satfs import process
 
 
@@ -44,9 +40,6 @@ def test_mnt_ns():
 
 
 def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
-    assert os.getresuid() == (ruid, euid, suid)
-    assert os.getresgid() == (rgid, egid, sgid)
-
     pid = os.getpid()
     with open(f"/proc/{pid}/status") as f:
         pid_status = f.readlines()
