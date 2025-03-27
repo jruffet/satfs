@@ -159,8 +159,8 @@ class Config:
         self.inherit_rules = False
         self.log_level = 0
         self.log_level_deny_list_entry = 0
-        self.ask_cache = TTLCache()
         self.ask_cache_ttl = 1
+        self.ask_cache = TTLCache(ttl=self.ask_cache_ttl)
         self.ask_dialog_timeout = 10
         self.errno = -fuse.EPERM
 
@@ -251,10 +251,12 @@ class Config:
         next_self = {}
         # init self attributes
         next_self["name"] = config_section["name"]
-        next_self["enforce"] = config_section.get("enforce", True)
-        next_self["inherit_rules"] = config_section.get("inherit_rules", True)
-        next_self["ask_cache_ttl"] = int(config_section.get("ask_cache_ttl", 10))
-        next_self["ask_dialog_timeout"] = int(config_section.get("ask_dialog_timeout", 10))
+        next_self["enforce"] = config_section.get("enforce", self.enforce)
+        next_self["inherit_rules"] = config_section.get("inherit_rules", self.inherit_rules)
+        next_self["ask_cache_ttl"] = int(config_section.get("ask_cache_ttl", self.ask_cache_ttl))
+        next_self["ask_dialog_timeout"] = int(
+            config_section.get("ask_dialog_timeout", self.ask_dialog_timeout)
+        )
         next_self["errno"] = -fuse.EPERM
 
         next_self["log_level"] = satlog.log_level(
