@@ -1,0 +1,5 @@
+fuse-python==1.0.9
+python-prctl==1.8.1
+PyYAML==6.0.2
+systemd-python==235
+black==25.1.0

@@ -1,0 +1,5 @@
+-r ../requirements.txt
+pytest==8.3.5
+pytest-testinfra==10.1.1
+paramiko==3.5.1
+psutil==7.0.0

@@ -1,0 +1,19 @@
+operations:
+  stat: [access, getattr, statfs]
+  list: [readdir, list_entry, readlink]
+  file_read: [open_read]
+  file_write: [open_write, truncate, unlink, create]
+  dir_write: [rmdir, mkdir, link, rename, symlink, mknod]
+  metadata_write: [chmod, chown, utime]
+
+perms:
+  stat: [stat]
+  list: [stat, list]
+  read: [stat, file_read]
+
+  file_read: [file_read]
+  file_write: [file_write]
+  file_read_write: [file_read, file_write]
+
+  list_read: [stat, list, file_read]
+  all: [stat, list, file_read, file_write, dir_write, metadata_write]

@@ -1,0 +1,64 @@
+#!include common/perms.yml
+
+config:
+  name: vagrant
+  log_level: INFO
+  log_level_deny_list_entry: WARNING
+  enforce: true
+  inherit_rules: true
+
+init_paths:
+  names:
+    # no wildcard first
+    vagrant_cat: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/cat']
+    vagrant_ls: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/ls']
+    vagrant_sudo_ls: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/sudo', '/usr/bin/dash', '/usr/bin/ls']
+    vlc: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-vlc']
+    mplayer: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-mplayer']
+
+    any_fake: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-*']
+    # matches anything launched by "dash" under the lineage
+    vagrant_dash: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/dash', '***']
+  groups:
+    media_players:
+      - vlc
+      - mplayer
+
+rules:
+  - name: video files
+    regex_path: .*\.(mp4|mkv|avi|mov|wmv|flv|webm|mpg|mpeg)
+    regex_ignorecase: true
+    perms:
+      list_read:
+        - media_players
+    inherit: false
+
+  - name: graphics files
+    regex_path: .*\.(gif|jpeg|jpg|png)
+    regex_ignorecase: true
+    perms:
+      list_read:
+        - vagrant_dash
+    errno: EPIPE
+
+  - name: all dirs
+    regex_path: .*/
+    perms:
+      list:
+        - media_players
+
+  - name: default_all
+    regex_path: /.*
+    perms:
+      list:
+        - vagrant_dash[0]
+        - vagrant_sudo_ls[0]
+      list_read:
+        - ignore:vagrant_cat
+      all:
+        - vagrant_dash
+
+  - name: slash
+    path: /
+    perms:
+      list: ['ANY', 'ANY[0]', 'ANY[1001]']
