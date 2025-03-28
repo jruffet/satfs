@@ -3,12 +3,13 @@ set -euo pipefail
 
 BOX_PREFIX="satfs-debian"
 keep_vagrant=false
+return_code=1
 
 cleanup() {
     if [ $keep_vagrant == false ]; then
         vagrant destroy -f
     fi
-    exit 1
+    exit $return_code
 }
 trap 'cleanup' EXIT
 
@@ -35,5 +36,4 @@ for version in bookworm64 testing64; do
     pytest -v --hosts=$box_name --ssh-config=<(vagrant ssh-config $box_name)
 done
 
-# Reached only if no test failed
-exit 0
+return_code=0
