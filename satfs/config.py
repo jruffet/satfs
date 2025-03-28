@@ -211,13 +211,12 @@ class Config:
             return [f"{access}:{x}[{uid}]" for x in init_paths["groups"].get(pure_ipn, [pure_ipn])]
 
     def reload_if_needed(self) -> None:
-        if self.need_reload():
-            try:
+        try:
+            if self.need_reload():
                 self.load()
-            except Exception as e:
-                logger.critical(f"ERROR: Config reload fail (rolling back): {type(e).__name__}: {str(e)}")
-            else:
                 logger.critical("*** Configuration file reloaded ***")
+        except Exception as e:
+            logger.critical(f"ERROR: Config reload fail (rolling back): {type(e).__name__}: {str(e)}")
 
     def load(self) -> None:
         self._config["mtime"] = self.get_config_file_mtime()
