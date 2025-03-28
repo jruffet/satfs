@@ -163,6 +163,7 @@ class Config:
                 set_privileges(fsuid=self.uid, fsgid=self.gid)
                 return mtime
             except:
+                set_privileges(fsuid=self.uid, fsgid=self.gid)
                 raise
         return None
 
