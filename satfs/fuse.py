@@ -16,7 +16,6 @@ import struct
 import signal
 import fuse
 from fuse import Fuse
-from threading import Lock
 from typing import Optional, Generator, Tuple, Any
 from .validator import Validator
 
@@ -139,33 +138,12 @@ class SatFS(Fuse):
         def __init__(self, path: str, flags: int, *mode: int) -> None:
             self.file = os.fdopen(os.open(f".{path}", flags, *mode), flags_to_mode(flags))
             self.fd = self.file.fileno()
-            if hasattr(os, "pread"):
-                self.iolock = None
-            else:
-                self.iolock = Lock()
 
         def read(self, length: int, offset: int) -> bytes:
-            if self.iolock:
-                self.iolock.acquire()
-                try:
-                    self.file.seek(offset)
-                    return self.file.read(length)
-                finally:
-                    self.iolock.release()
-            else:
-                return os.pread(self.fd, length, offset)
+            return os.pread(self.fd, length, offset)
 
         def write(self, buf: bytes, offset: int) -> int:
-            if self.iolock:
-                self.iolock.acquire()
-                try:
-                    self.file.seek(offset)
-                    self.file.write(buf)
-                    return len(buf)
-                finally:
-                    self.iolock.release()
-            else:
-                return os.pwrite(self.fd, buf, offset)
+            return os.pwrite(self.fd, buf, offset)
 
         def _fflush(self) -> None:
             if "w" in self.file.mode or "a" in self.file.mode:
