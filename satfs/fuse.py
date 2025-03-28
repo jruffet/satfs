@@ -154,7 +154,7 @@ class SatFS(Fuse):
 
         def fsync(self, isfsyncfile: int) -> None:
             self._fflush()
-            if isfsyncfile and hasattr(os, "fdatasync"):
+            if isfsyncfile:
                 os.fdatasync(self.fd)
             else:
                 os.fsync(self.fd)
