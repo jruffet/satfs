@@ -117,7 +117,7 @@ class Validator:
         context_uid = fuse_context["uid"]
 
         if context_pid == 0:
-            return self.ruling(path=path, ret=0, msg="PID 0, operation coming from FUSE")
+            return self.ruling(path=path, ret=0, msg="Operation coming from the kernel (PID 0)")
 
         if not config.enforce:
             return self.ruling(path=path, ret=0, msg="Enforce is disabled")
