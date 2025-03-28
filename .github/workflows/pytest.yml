@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libcap-dev libsystemd-dev
+          sudo apt-get install -y --no-install-recommends libcap-dev libsystemd-dev libfuse-dev
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
