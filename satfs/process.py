@@ -40,7 +40,7 @@ def set_privileges(
     fsuid: Optional[int] = None,
     fsgid: Optional[int] = None,
     caps: Optional[List[str]] = None,
-    clear_groups: Optional[int] = None,
+    clear_groups: Optional[bool] = None,
 ) -> None:
 
     try:
