@@ -3,13 +3,25 @@
 import pytest
 
 uid, gid = 1000, 1000
-satfs_conf = "/etc/satfs/satfs-vagrant.yml"
 mountpoint = "/mnt/satfs"
-satfs_cmd = f"/vagrant/main.py -o uid={uid},gid={gid},conf={satfs_conf} {mountpoint}"
+
+
+@pytest.fixture
+def satfs_conf(host):
+    hostname = host.backend.get_hostname()
+    for distro in ["debian-bookworm", "debian-testing"]:
+        if distro in hostname:
+            return f"/etc/satfs/vagrant-{distro}.yml"
+    pytest.fail(f"Unsupported hostname or path not recognized: {hostname}")
+
+
+@pytest.fixture
+def satfs_cmd(host, satfs_conf):
+    return f"/vagrant/main.py -o uid={uid},gid={gid},conf={satfs_conf} {mountpoint}"
 
 
 @pytest.fixture(autouse=True, scope="function")
-def setup_satfs(host):
+def setup_satfs(host, satfs_cmd):
     with host.sudo():
         host.run(f"umount {mountpoint}")
         # cleanup and populate "fake" binaries
@@ -25,13 +37,12 @@ def setup_satfs(host):
                 echo bla > {mountpoint}/file.$ext;
                 echo blu > {mountpoint}/dir/file.$ext;
             done
-        """
+            """
         )
         host.run(f"touch {mountpoint}/file_no_ext")
         # deploy config and run
         host.run("rm -rf /etc/satfs && umask 077 && mkdir /etc/satfs")
         host.run("cp -a /vagrant/examples/conf/* /etc/satfs/")
-
         # cleanup journal for later checks
         host.run("journalctl --rotate --vacuum-time=1s -t satfs")
         # mount satfs
@@ -53,8 +64,8 @@ def test_capabilities_and_perms(host):
         assert "Gid:\t0\t1000\t0\t1000" in pid_status
 
 
-def test_fs_operations(host):
-    # we just want to test the fuse part, so we bypass the access control
+def test_fs_operations(host, satfs_conf):
+    # We just want to test the fuse part, so we bypass the access control.
     with host.sudo():
         host.run(f"sed 's/enforce: true/enforce: false/g' -i {satfs_conf}")
 
@@ -198,6 +209,6 @@ def test_fs_permissions(host):
     assert "Permission denied" in host.run(f"sh -c 'rm -f {mountpoint}/dir/file.txt'").stderr
 
 
-def test_mount_twice(host):
+def test_mount_twice(host, satfs_cmd):
     with host.sudo():
         assert "[FATAL] satfs already mounted" in host.run(satfs_cmd).stderr

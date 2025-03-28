@@ -20,8 +20,8 @@ def is_mount_private(target: str) -> bool:
 @pytest.fixture(autouse=True, scope="module")
 def require_host():
     # Skip tests unless we are on the expected host
-    if socket.gethostname() != "vagrant-satfs":
-        pytest.skip("Test only runs on 'vagrant-satfs' host")
+    if not socket.gethostname().startswith("satfs-"):
+        pytest.skip("Test only runs on 'satfs-*' host")
 
 
 def test_mnt_ns():

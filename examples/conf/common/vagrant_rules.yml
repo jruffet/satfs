@@ -1,0 +1,38 @@
+rules:
+  - name: video files
+    regex_path: .*\.(mp4|mkv|avi|mov|wmv|flv|webm|mpg|mpeg)
+    regex_ignorecase: true
+    perms:
+      list_read:
+        - media_players
+    inherit: false
+
+  - name: graphics files
+    regex_path: .*\.(gif|jpeg|jpg|png)
+    regex_ignorecase: true
+    perms:
+      list_read:
+        - vagrant_dash
+    errno: EPIPE
+
+  - name: all dirs
+    regex_path: .*/
+    perms:
+      list:
+        - media_players
+
+  - name: default_all
+    regex_path: /.*
+    perms:
+      list:
+        - vagrant_dash[0]
+        - vagrant_sudo_ls[0]
+      list_read:
+        - ignore:vagrant_cat
+      all:
+        - vagrant_dash
+
+  - name: slash
+    path: /
+    perms:
+      list: ['ANY', 'ANY[0]', 'ANY[1001]']

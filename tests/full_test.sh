@@ -1,4 +1,5 @@
 #!/bin/bash
+BOX_PREFIX="satfs-debian"
 
 # Return 0 if all tests passed
 keep_vagrant=false
@@ -16,10 +17,13 @@ fi
 echo "[+] local pytest"
 pytest -v && \
 cd vagrant && \
-echo "[+] remote pytest (vagrant)" && \
-vagrant ssh -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked" && \
-echo "[+] testinfra (vagrant)" && \
-pytest -v --hosts=vagrant-satfs --ssh-config=<(vagrant ssh-config)
+for version in bookworm64 testing64; do
+    box_name="${BOX_PREFIX}-${version}" && \
+    echo "[+] remote pytest ($box_name)" && \
+    vagrant ssh $box_name -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked" && \
+    echo "[+] testinfra ($box_name)" && \
+    pytest -v --hosts=$box_name --ssh-config=<(vagrant ssh-config $box_name)
+done
 
 status=$?
 

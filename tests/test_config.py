@@ -7,6 +7,8 @@ import logging
 import pathlib
 import time
 import re
+import glob
+
 from unittest import mock
 from satfs.config import Config, preprocess_yaml
 from satfs import satlog
@@ -14,7 +16,7 @@ from satfs import satlog
 topdir = pathlib.Path(__file__).parent.parent
 
 
-@pytest.fixture(params=[f"{topdir}/examples/conf/satfs-vagrant.yml"])
+@pytest.fixture(params=glob.glob(f"{topdir}/examples/conf/*.yml"))
 def setup(request):
     conf_path = request.param
     config = Config()
@@ -100,10 +102,16 @@ def test_ask_cache(setup):
 
 
 def test_init_path_to_ipn(setup):
-    _, _, config = setup
+    path, _, config = setup
     assert config.init_path_to_ipn(("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session"), config.uid) is None
 
-    base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
+    if "bookworm" in path:
+        base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
+    elif "testing" in path:
+        base = ("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-session")
+    else:
+        pytest.fail("Unsupported distribution")
+
     assert (
         config.init_path_to_ipn(base + ("/usr/bin/dash", "/usr/bin/kikoo", "/opt/lol"), 1234)
         == "vagrant_dash[1234]"
