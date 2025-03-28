@@ -53,8 +53,8 @@ class SatFS(Fuse):
 
     @Validator(path_args_pos=[1])
     def readdir(self, path: str, offset: int) -> Generator[fuse.Direntry, None, None]:
-        yield fuse.Direntry(".")
-        yield fuse.Direntry("..")
+        yield fuse.Direntry(".", ino=os.lstat(".").st_ino)
+        yield fuse.Direntry("..", ino=os.lstat("..").st_ino)
 
         for e in os.listdir(f".{path}"):
             if self.validator_list_entry.validate_access(path=f"{path}/{e}") == 0:

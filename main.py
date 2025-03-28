@@ -16,6 +16,9 @@ from satfs.fuse import SatFS
 from satfs.config import config
 from satfs.satlog import logger
 
+MIN_FUSE_VERSION = (0, 2)
+MIN_PYTHON_VERSION = (3, 11)
+
 
 def already_mounted(program_name: str, mountpoint: str) -> bool:
     with open("/proc/mounts", "r") as f:
@@ -30,7 +33,7 @@ def fatal_exit(msg):
 def main():
     program_name = "satfs"
 
-    fuse.fuse_python_api = (0, 2)
+    fuse.fuse_python_api = MIN_FUSE_VERSION
     fuse.feature_assert("stateful_files", "has_init")
 
     server = SatFS(version="SatFS 0.1", dash_s_do="setsingle")
@@ -49,10 +52,12 @@ def main():
     # server.fuse_args.optdict["subtype"] = "satfs"
 
     if server.fuse_args.mount_expected():
+        if sys.version_info < MIN_PYTHON_VERSION:
+            fatal_exit(f"SatFS requires Python {'.'.join(str(x) for x in MIN_PYTHON_VERSION)} or higher")
         try:
-            assert hasattr(server, "conf"), "Configuration file path must be specified"
-            assert "uid" in server.fuse_args.optdict, "UID must be specified"
-            assert "gid" in server.fuse_args.optdict, "GID must be specified"
+            assert hasattr(server, "conf"), "Configuration file path must be specified (-o conf)"
+            assert "uid" in server.fuse_args.optdict, "UID must be specified (-o uid)"
+            assert "gid" in server.fuse_args.optdict, "GID must be specified (-o gid)"
             assert server.fuse_args.optdict["uid"] != 0, "UID must be non-root"
             assert server.fuse_args.optdict["gid"] != 0, "GID must be non-root"
             assert server.fuse_args.mountpoint is not None, "Mountpoint not provided"
