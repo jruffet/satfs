@@ -99,17 +99,17 @@ The following FUSE options are enforced:
 
 Example on how to run SatFS:
 ```sh
-sudo satfs -f -o uid=1000,gid=1000,conf=/path/to/your_conf.yml mountpoint
+sudo satfs -f -o fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml mountpoint
 ```
 
-This will use UID/GID 1000 to access `mountpoint`, and apply the given configuration
+This will use FSUID/FSGID 1000 to access `mountpoint`, and apply the given configuration
 
 #### Using fstab
 
 To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount satfs early):
 
 ```fstab
-none /mountpoint fuse.satfs noauto,uid=1000,gid=1000,conf=/path/to/your_conf.yml 0 0
+none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml 0 0
 ```
 
 

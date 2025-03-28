@@ -39,6 +39,8 @@ def main():
     server = SatFS(version="SatFS 0.1", dash_s_do="setsingle")
 
     server.parser.add_option(mountopt="conf", metavar="CONF_FILE", help="SatFS configuration file")
+    server.parser.add_option(mountopt="fsuid", metavar="UID", help="fsuid to use")
+    server.parser.add_option(mountopt="fsgid", metavar="GID", help="fsgid to use")
     # force mono-threaded for now, fuse.FuseGetContext() is not guaranteed to be exact otherwise
     server.parser.fuse.multithreaded = False
     server.parse(values=server, errex=1)
@@ -56,10 +58,10 @@ def main():
             fatal_exit(f"SatFS requires Python {'.'.join(str(x) for x in MIN_PYTHON_VERSION)} or higher")
         try:
             assert hasattr(server, "conf"), "Configuration file path must be specified (-o conf)"
-            assert "uid" in server.fuse_args.optdict, "UID must be specified (-o uid)"
-            assert "gid" in server.fuse_args.optdict, "GID must be specified (-o gid)"
-            assert server.fuse_args.optdict["uid"] != 0, "UID must be non-root"
-            assert server.fuse_args.optdict["gid"] != 0, "GID must be non-root"
+            assert hasattr(server, "fsuid"), "FSUID must be specified (-o fsuid)"
+            assert hasattr(server, "fsgid"), "FSGID must be specified (-o fsgid)"
+            assert int(server.fsuid) != 0, "UID must be non-root"
+            assert int(server.fsgid) != 0, "GID must be non-root"
             assert server.fuse_args.mountpoint is not None, "Mountpoint not provided"
         except AssertionError as e:
             fatal_exit(e)
@@ -69,8 +71,8 @@ def main():
         mountpoint = server.fuse_args.mountpoint
 
         config.set_config_file(server.conf)
-        config.uid = int(server.fuse_args.optdict["uid"])
-        config.gid = int(server.fuse_args.optdict["gid"])
+        config.uid = int(server.fsuid)
+        config.gid = int(server.fsgid)
         config.mountpoint = mountpoint
 
         process.set_privileges(

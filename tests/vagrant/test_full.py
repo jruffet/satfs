@@ -17,7 +17,7 @@ def satfs_conf(host):
 
 @pytest.fixture
 def satfs_cmd(host, satfs_conf):
-    return f"/vagrant/main.py -o uid={uid},gid={gid},conf={satfs_conf} {mountpoint}"
+    return f"/vagrant/main.py -o fsuid={uid},fsgid={gid},conf={satfs_conf} {mountpoint}"
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -104,10 +104,10 @@ def test_fs_operations(host, satfs_conf):
     assert file.size == 0  # Empty file after creation
 
     # Make directory
-    dir = host.file(test_dir)
+    directory = host.file(test_dir)
     assert host.run(f"mkdir {test_dir}").rc == 0
-    assert dir.exists
-    assert dir.is_directory
+    assert directory.exists
+    assert directory.is_directory
 
     # List directory contents
     assert "testfile.txt" in host.check_output(f"ls {mountpoint}/")
@@ -121,12 +121,9 @@ def test_fs_operations(host, satfs_conf):
         # we are running with fsuid(1000) and no CAP_CHOWN
         assert host.run(f"chown root:root {test_file}").rc == 1
 
-        assert host.run(f"chown vagrant:vagrant {test_file}").rc == 0
-        assert file.user == "vagrant"
-        assert file.group == "vagrant"
-
         assert host.run(f"rm -f {test_file}").rc == 0
         assert host.run(f"touch {test_file}").rc == 0
+        # even with sudo, we will create vagrant:vagrant owned files
         assert file.user == "vagrant"
         assert file.group == "vagrant"
 
@@ -171,7 +168,7 @@ def test_fs_operations(host, satfs_conf):
 
     # Remove directory
     assert host.run(f"rmdir {test_dir}").rc == 0
-    assert not dir.exists
+    assert not directory.exists
 
     # Create a file with a specific umask (e.g., 0777)
     assert host.run(f"umask 0777 && touch {test_file}").rc == 0
