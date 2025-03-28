@@ -15,34 +15,6 @@ from .process import set_privileges
 from .cache import TTLCache
 
 
-def preprocess_yaml(filename: str) -> str:
-    """Read a YAML file and replace !include directives with actual YAML content."""
-    base_dir = os.path.dirname(os.path.abspath(filename))
-
-    with open(filename, "r") as f:
-        lines = []
-        for line in f:
-            if line.strip().startswith("#!include"):
-                included_file = line.strip().split(" ", 1)[1]
-                included_path = os.path.join(base_dir, included_file)
-
-                if not os.path.exists(included_path):
-                    raise FileNotFoundError(f"Included file not found: {included_path}")
-
-                # Ensure the included file is a YAML file
-                if not included_path.endswith((".yaml", ".yml")):
-                    raise ValueError(f"Invalid file type for inclusion: {included_path}")
-
-                with open(included_path, "r") as inc_f:
-                    included_content = inc_f.readlines()
-
-                lines.extend(included_content)
-            else:
-                lines.append(line)
-
-    return "".join(lines)
-
-
 def validate_config_section(config_section: Dict) -> None:
     cs = {
         "name": {"restrict": None, "type": str},
@@ -218,11 +190,38 @@ class Config:
         except Exception as e:
             logger.critical(f"ERROR: Config reload fail (rolling back): {type(e).__name__}: {str(e)}")
 
+    def preprocess_config_yaml(self) -> str:
+        """Read a YAML file and replace !include directives with actual YAML content."""
+        base_dir = os.path.dirname(os.path.abspath(self._config["path"]))
+
+        with open(self._config["path"], "r") as f:
+            lines = []
+            for line in f:
+                if line.strip().startswith("#!include"):
+                    included_file = line.strip().split(" ", 1)[1]
+                    included_path = os.path.join(base_dir, included_file)
+
+                    if not os.path.exists(included_path):
+                        raise FileNotFoundError(f"Included file not found: {included_path}")
+
+                    # Ensure the included file is a YAML file
+                    if not included_path.endswith((".yaml", ".yml")):
+                        raise ValueError(f"Invalid file type for inclusion: {included_path}")
+
+                    with open(included_path, "r") as inc_f:
+                        included_content = inc_f.readlines()
+
+                    lines.extend(included_content)
+                else:
+                    lines.append(line)
+
+        return "".join(lines)
+
     def load(self) -> None:
         self._config["mtime"] = self.get_config_file_mtime()
         try:
             set_privileges(fsuid=0, fsgid=0)
-            preprocessed_content = preprocess_yaml(self._config["path"])
+            preprocessed_content = self.preprocess_config_yaml()
             config_dict = yaml.safe_load(preprocessed_content)
             set_privileges(fsuid=self.uid, fsgid=self.gid)
         except Exception:

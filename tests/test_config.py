@@ -10,7 +10,7 @@ import re
 import glob
 
 from unittest import mock
-from satfs.config import Config, preprocess_yaml
+from satfs.config import Config
 from satfs import satlog
 
 topdir = pathlib.Path(__file__).parent.parent
@@ -127,11 +127,11 @@ def test_init_path_to_ipn(setup):
 def run_bogus_config_test(setup, sub_from, sub_to, exception_type, error_str):
     path, _, config = setup
 
-    raw_yaml = preprocess_yaml(path)
+    raw_yaml = config.preprocess_config_yaml()
     modified_yaml = re.sub(sub_from, sub_to, raw_yaml, flags=re.MULTILINE, count=1)
 
     with mock.patch("satfs.config.set_privileges", return_value=0):
-        with mock.patch("satfs.config.preprocess_yaml", return_value=modified_yaml):
+        with mock.patch("satfs.config.Config.preprocess_config_yaml", return_value=modified_yaml):
             with pytest.raises(exception_type) as exc_info:
                 config.load()
 
