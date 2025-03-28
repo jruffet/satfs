@@ -9,6 +9,7 @@ import copy
 from typing import Optional, Tuple, Dict, List
 from itertools import chain
 from functools import cache
+from contextlib import contextmanager
 from . import satlog
 from .satlog import logger
 from .process import set_privileges
@@ -151,20 +152,22 @@ class Config:
         self.perm_to_operations = {}
         self.rules = []
 
+    @contextmanager
+    def fs_privileges(self):
+        set_privileges(fsuid=0, fsgid=0)
+        try:
+            yield
+        finally:
+            set_privileges(fsuid=self.uid, fsgid=self.gid)
+
     def set_config_file(self, path: str) -> None:
         self._config["path"] = path
         self._config["mtime"] = 0
 
     def get_config_file_mtime(self) -> Optional[int]:
         if self._config["path"] is not None:
-            try:
-                set_privileges(fsuid=0, fsgid=0)
-                mtime = os.stat(self._config["path"]).st_mtime
-                set_privileges(fsuid=self.uid, fsgid=self.gid)
-                return mtime
-            except:
-                set_privileges(fsuid=self.uid, fsgid=self.gid)
-                raise
+            with self.fs_privileges():
+                return os.stat(self._config["path"]).st_mtime
         return None
 
     def need_reload(self) -> bool:
@@ -220,13 +223,10 @@ class Config:
 
     def load(self) -> None:
         self._config["mtime"] = self.get_config_file_mtime()
-        try:
-            set_privileges(fsuid=0, fsgid=0)
+
+        with self.fs_privileges():
             preprocessed_content = self.preprocess_config_yaml()
             config_dict = yaml.safe_load(preprocessed_content)
-            set_privileges(fsuid=self.uid, fsgid=self.gid)
-        except Exception:
-            raise
 
         try:
             validate_config_section(config_section=config_dict.get("config", {}))
