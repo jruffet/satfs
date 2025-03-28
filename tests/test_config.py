@@ -103,7 +103,7 @@ def test_init_path_to_ipn(setup):
     _, _, config = setup
     assert config.init_path_to_ipn(("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session"), config.uid) is None
 
-    base = ("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-session")
+    base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
     assert (
         config.init_path_to_ipn(base + ("/usr/bin/dash", "/usr/bin/kikoo", "/opt/lol"), 1234)
         == "vagrant_dash[1234]"

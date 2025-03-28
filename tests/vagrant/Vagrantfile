@@ -1,6 +1,6 @@
 Vagrant.configure("2") do |config|
   config.vm.define "vagrant-satfs" do |test_vm|
-    test_vm.vm.box = "debian/testing64"
+    test_vm.vm.box = "debian/bookworm64"
     test_vm.vm.hostname = "vagrant-satfs"
     test_vm.vm.provider "virtualbox" do |vb|
       vb.memory = "1024"

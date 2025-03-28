@@ -12,15 +12,15 @@ config:
 init_paths:
   names:
     # no wildcard first
-    vagrant_cat: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/cat']
-    vagrant_ls: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/ls']
-    vagrant_sudo_ls: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/sudo', '/usr/bin/dash', '/usr/bin/ls']
-    vlc: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-vlc']
-    mplayer: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-mplayer']
+    vagrant_cat: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/cat']
+    vagrant_ls: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/ls']
+    vagrant_sudo_ls: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/sudo', '/usr/bin/dash', '/usr/bin/ls']
+    vlc: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/local/bin/fake-vlc']
+    mplayer: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/local/bin/fake-mplayer']
 
-    any_fake: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-*']
+    any_fake: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/local/bin/fake-*']
     # matches anything launched by "dash" under the lineage
-    vagrant_dash: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/dash', '***']
+    vagrant_dash: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/dash', '***']
   groups:
     media_players:
       - vlc
