@@ -77,7 +77,7 @@ def test_fs_operations(host, satfs_conf):
 
     # Create a file
     file = host.file(test_file)
-    host.run(f"touch {test_file}")
+    assert host.run(f"touch {test_file}").rc == 0
     assert file.exists
     assert file.is_file
 
@@ -88,13 +88,13 @@ def test_fs_operations(host, satfs_conf):
     assert not file.is_symlink
 
     # Symlink
-    host.run(f"ln -s {test_file} {symlink_path}")
+    assert host.run(f"ln -s {test_file} {symlink_path}").rc == 0
     symlink = host.file(symlink_path)
     assert symlink.is_symlink
     assert symlink.linked_to == test_file
 
     # Hardlink
-    host.run(f"ln {test_file} {hardlink_path}")
+    assert host.run(f"ln {test_file} {hardlink_path}").rc == 0
     hardlink = host.file(hardlink_path)
     assert hardlink.exists
     assert hardlink.is_file
@@ -105,7 +105,7 @@ def test_fs_operations(host, satfs_conf):
 
     # Make directory
     dir = host.file(test_dir)
-    host.run(f"mkdir {test_dir}")
+    assert host.run(f"mkdir {test_dir}").rc == 0
     assert dir.exists
     assert dir.is_directory
 
@@ -113,24 +113,30 @@ def test_fs_operations(host, satfs_conf):
     assert "testfile.txt" in host.check_output(f"ls {mountpoint}/")
 
     # Change file mode
-    host.run(f"chmod 600 {test_file}")
+    assert host.run(f"chmod 600 {test_file}").rc == 0
     assert file.mode == 0o600
 
     # Change file ownership
     with host.sudo():
         # we are running with fsuid(1000) and no CAP_CHOWN
-        host.run(f"chown root:root {test_file}").rc == 1
-        host.run(f"chown vagrant:vagrant {test_file}")
+        assert host.run(f"chown root:root {test_file}").rc == 1
+
+        assert host.run(f"chown vagrant:vagrant {test_file}").rc == 0
+        assert file.user == "vagrant"
+        assert file.group == "vagrant"
+
+        assert host.run(f"rm -f {test_file}").rc == 0
+        assert host.run(f"touch {test_file}").rc == 0
         assert file.user == "vagrant"
         assert file.group == "vagrant"
 
     # Truncate file
-    host.run(f"echo 'hello world' > {test_file}")
-    host.run(f"truncate -s 5 {test_file}")
+    assert host.run(f"echo 'hello world' > {test_file}").rc == 0
+    assert host.run(f"truncate -s 5 {test_file}").rc == 0
     assert file.content_string == "hello"
 
     # Open file for writing
-    host.run(f"echo -n 'write test' > {test_file}")
+    assert host.run(f"echo -n 'write test' > {test_file}").rc == 0
     assert file.exists
     assert file.content_string == "write test"
 
@@ -139,15 +145,15 @@ def test_fs_operations(host, satfs_conf):
     assert read_output == "write test"
 
     # Truncate file
-    host.run(f"truncate -s 5 {test_file}")
+    assert host.run(f"truncate -s 5 {test_file}").rc == 0
     assert file.content_string == "write"
 
     # Append to file
-    host.run(f"echo ' more' >> {test_file}")
+    assert host.run(f"echo ' more' >> {test_file}").rc == 0
     assert file.content_string == "write more\n"
 
     # Rename file
-    host.run(f"mv {test_file} {new_file_path}")
+    assert host.run(f"mv {test_file} {new_file_path}").rc == 0
     new_file = host.file(new_file_path)
     assert new_file.exists
     assert not file.exists  # Old path should be gone
@@ -156,19 +162,19 @@ def test_fs_operations(host, satfs_conf):
     assert host.run(f"test -r {new_file_path}").rc == 0
 
     # Modify file timestamps (utime)
-    host.run(f"touch -d '2000-01-01 00:00:00' {new_file_path}")
+    assert host.run(f"touch -d '2000-01-01 00:00:00' {new_file_path}").rc == 0
     assert "2000-01-01" in host.check_output(f"stat {new_file_path}")
 
     # Remove file
-    host.run(f"rm {new_file_path}")
+    assert host.run(f"rm {new_file_path}").rc == 0
     assert not new_file.exists
 
     # Remove directory
-    host.run(f"rmdir {test_dir}")
+    assert host.run(f"rmdir {test_dir}").rc == 0
     assert not dir.exists
 
     # Create a file with a specific umask (e.g., 0777)
-    host.run(f"umask 0777 && touch {test_file}")
+    assert host.run(f"umask 0777 && touch {test_file}").rc == 0
     file = host.file(test_file)
     assert file.mode == 0o000  # Ensure the file has no permissions due to umask 0777
 
