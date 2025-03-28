@@ -96,7 +96,7 @@ In permission rules, the special keyword **ANY** can be used. **ANY** represents
 The following actions can be specified in permission rules:
 - **allow**: Grants access and logs the action.
 - **allow_silent**: Grants access without logging.
-- **ask**: Interactively asks for permission (via a popup). Answer is cached for `ask_cache_ttl` seconds.
+- **ask**: Interactively asks for permission (via `kdialog` or `zenity`). Answer is cached for `ask_cache_ttl` seconds.
 - **deny**: Denies access and logs the denial (if log level is WARN or above)
 - **ignore**: Denies access without logging.
 

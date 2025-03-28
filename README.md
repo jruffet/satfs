@@ -45,7 +45,7 @@ A `list_entry` operation has been added to allow for hiding files or directories
 Rules define regex-based path matching and specify actions:
 - **allow** – Permit access
 - **deny** – Block access
-- **ask** – Prompt the user interactively
+- **ask** – Prompt the user interactively via a GTK/QT dialog
 
 ### Configuration Auto-Reload
 When the configuration file changes (`mtime` update), SatFS reloads it automatically. Since SatFS is single-threaded, no race conditions occur.
