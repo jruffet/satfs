@@ -226,3 +226,9 @@ def test_kill(host):
 def test_umount(host):
     assert host.run(f"fusermount -u {mountpoint}").rc == 1
     assert host.run(f"umount {mountpoint}").rc == 32
+
+
+def test_cd_proc_cwd(host):
+    cd_pid_cwd = host.run("cd /proc/$(pidof satfs)/cwd")
+    assert cd_pid_cwd.rc == 1
+    assert "Permission denied" in cd_pid_cwd.stderr
