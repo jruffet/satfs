@@ -75,12 +75,16 @@ def main():
         config.gid = int(server.fsgid)
         config.mountpoint = mountpoint
 
+        # keep real/saved UID/GID to 0 to prevent non-priv to umount or SIGKILL us
+        # keep CAP_SYS_PTRACE to be able to readlink() all /proc/PID/exe
+        # keep CAP_SETUID/CAP_SETGID to be able to setuid()/setfsuid() later on (interactive popup)
         process.set_privileges(
             euid=config.uid,
             egid=config.gid,
             fsuid=config.uid,
             fsgid=config.gid,
             clear_groups=True,
+            caps=["CAP_SYS_PTRACE", "CAP_SETUID", "CAP_SETGID"],
         )
         # Ignore SIGINT (KeyboardInterrupt)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -98,71 +102,31 @@ def main():
             fatal_exit(f"Could not load configuration: {e}")
 
         server.child_pid = None
-        read_fd, write_fd = os.pipe()
+        os.chdir(mountpoint)
 
         child_pid = os.fork()
-        parent_mnt_ns = process.get_current_mnt_ns()
         if child_pid == 0:
             # --- Child Process ---
-            os.close(read_fd)
-            try:
-                # set up mnt ns to keep a reference of source before mount
-                # technically, just chdir() would work because we only use relative paths for source
-                # but that works only in foreground mode.
-                # In background mode we get forked, detached and chdir'ed by Fuse later
-                # This code keeps a reference we can later use to chdir() to.
-                # process.set_privileges(euid=0, egid=0)
-                process.create_mnt_ns()
-                assert (
-                    parent_mnt_ns != process.get_current_mnt_ns()
-                ), "parent mnt ns == child mnt ns, this should not happen!"
-                process.make_mount_private("/")
-                os.write(write_fd, b"OK")
-            except Exception as e:
-                error_msg = f"Error setting up mount namespace: {e}".encode()
-                os.write(write_fd, error_msg)
-                os.close(write_fd)
-                sys.exit(1)
-
-            os.close(write_fd)
-            # Keep the mount namespace open until we are killed by parent
+            # Keep a "reference" to the underlying dir (cwd) until we are killed by parent
             # 1 min tops, so that we end up exiting in all cases,
             # even if something went wrong with the parent
             time.sleep(60)
             sys.exit(1)
-        else:
-            # --- Parent Process ---
-            os.close(write_fd)
-            response = os.read(read_fd, 1024).decode()
-            os.close(read_fd)
 
-            if response.strip() != "OK":
-                fatal_exit(response)
-
-            # use mountpoint in child mnt ns as source
-            server.source = f"/proc/{child_pid}/root/{mountpoint}"
-            # used to kill the child later at fsinit() in Fuse code
-            server.child_pid = child_pid
-
-        # keep real/saved UID/GID to 0 to prevent non-priv to umount or SIGKILL us
-        # keep CAP_SYS_PTRACE to be able to readlink() all /proc/PID/exe
-        # keep CAP_SETUID to be able to setuid()/setfsuid() later on
-        process.set_privileges(
-            euid=config.uid,
-            egid=config.gid,
-            fsuid=config.uid,
-            fsgid=config.gid,
-            clear_groups=True,
-            caps=["CAP_SYS_PTRACE", "CAP_SETUID", "CAP_SETGID"],
-        )
+        # --- Parent Process ---
+        # use mountpoint in child mnt ns as source
+        server.source = f"/proc/{child_pid}/cwd"
+        # used to kill the child later at fsinit() in Fuse code
+        server.child_pid = child_pid
 
         try:
             os.chdir(server.source)
         except OSError as e:
             if child_pid is not None:
                 os.kill(child_pid, signal.SIGUSR1)
-            fatal_exit(f"Can't enter root of the underlying filesystem: {e}")
+            fatal_exit(f"Can't enter cwd of child: {e}")
 
+        # not quite true yet
         logger.critical("*** SatFS mounted ***")
 
     server.main()
