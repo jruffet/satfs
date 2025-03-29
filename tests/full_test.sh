@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-BOX_PREFIX="satfs-debian"
+BOX_PREFIX="satfs-"
+
 keep_vagrant=false
 return_code=1
 
@@ -28,8 +29,8 @@ pytest -v
 
 cd vagrant
 
-for version in bookworm64 testing64; do
-    box_name="${BOX_PREFIX}-${version}"
+for distro in debian-bookworm64 debian-testing64; do
+    box_name="${BOX_PREFIX}${distro}"
     echo "[+] remote pytest ($box_name)"
     vagrant ssh $box_name -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked"
     echo "[+] testinfra ($box_name)"
