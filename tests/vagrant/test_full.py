@@ -215,3 +215,14 @@ def test_fs_permissions(host):
 def test_mount_twice(host, satfs_cmd):
     with host.sudo():
         assert "[FATAL] satfs already mounted" in host.run(satfs_cmd).stderr
+
+
+def test_kill(host):
+    kill_cmd = host.run("kill -9 $(pidof satfs)")
+    assert kill_cmd.rc == 1
+    assert "Operation not permitted" in kill_cmd.stderr
+
+
+def test_umount(host):
+    assert host.run(f"fusermount -u {mountpoint}").rc == 1
+    assert host.run(f"umount {mountpoint}").rc == 32
