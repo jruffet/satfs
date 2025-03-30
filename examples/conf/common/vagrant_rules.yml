@@ -35,4 +35,7 @@ rules:
   - name: slash
     path: /
     perms:
+      # this does not grant "list" on elements inside /
+      # so in effect, it will return "." and ".."
+      # unless there was a match above
       list: ['ANY', 'ANY[0]', 'ANY[1001]']
