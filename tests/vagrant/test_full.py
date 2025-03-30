@@ -238,6 +238,10 @@ def test_umount(host):
     assert host.run(f"umount {mountpoint}").rc == 32
 
 
+def test_strace(host):
+    assert host.run("strace -p $(pidof satfs)").rc == 1
+
+
 def test_cd_proc_cwd(host):
     cd_pid_cwd = host.run("cd /proc/$(pidof satfs)/cwd")
     assert cd_pid_cwd.rc == 1
