@@ -141,8 +141,10 @@ class Config:
         self.init_paths = {}
 
         # will be set externally
-        self.uid = None
-        self.gid = None
+        self.fsuid = None
+        self.fsgid = None
+        self.dropuid = None
+        self.dropgid = None
         self.mountpoint = None
 
         self.init_paths = {
@@ -154,11 +156,11 @@ class Config:
 
     @contextmanager
     def fs_privileges(self):
-        set_privileges(fsuid=0, fsgid=0)
+        set_privileges(fsuid=self.dropuid, fsgid=self.dropgid)
         try:
             yield
         finally:
-            set_privileges(fsuid=self.uid, fsgid=self.gid)
+            set_privileges(fsuid=self.fsuid, fsgid=self.fsgid)
 
     def set_config_file(self, path: str) -> None:
         self._config["path"] = path
@@ -177,7 +179,7 @@ class Config:
     def expand_ipn(self, ipn: str, init_paths: Dict) -> list:
         my_ipn = ipn
         if not re.search(r"\[\d+\]$", ipn):
-            my_ipn = f"{my_ipn}[{self.uid}]"
+            my_ipn = f"{my_ipn}[{self.fsuid}]"
         if not re.search(r"^(allow|allow_silent|ask|deny|ignore):", my_ipn):
             my_ipn = f"allow:{my_ipn}"
 

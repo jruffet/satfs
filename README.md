@@ -84,39 +84,62 @@ sudo pip install .
 
 ### Running SatFS
 
+Before running SatFS, create a system user and group named `satfs`:
+
+    ```sh
+    sudo groupadd --system satfs
+    sudo useradd --system --gid satfs --shell /usr/sbin/nologin --create-home satfs
+    ```
+
+Use the UID and GID of `satfs` (obtain them with `id satfs`) as the values for `dropuid` and `dropgid` when running SatFS.
+
+If `dropuid` and `dropgid` are not provided, SatFS will automatically use the UID/GID of the `satfs` user (which must be a system user with UID/GID less than 1000). Afterward, ensure the configuration file is readbable by the `satfs` user or group.
+
 Run `satfs` in the foreground (with `-f`) or background (without).
 
 Logs go to stderr (if in foreground) and journald. Log level is adjusted in the configuration file.
 
-The filesystem is mounted with provided `uid`/`gid` and configuration file.
+The filesystem is mounted with the provided `fsuid`/`fsgid` and configuration file.
+
+**Note:** Below example is designed to protect a directory that belongs to user/group `1000/1000`, adjust accordingly.
 
 The following FUSE options are enforced:
 
 - **nonempty:** Because the whole idea is to protect an existing directory.
-- **allow_other:** Since it runs as root, this option allows other users to access the mountpoint.
 - **default_permissions:** This ensures that the kernel checks permissions to avoid security risks.
-- **use_ino:** Honor the st_ino field in kernel functions getattr() and fill_dir().
+- **use_ino:** Honors the `st_ino` field in kernel functions `getattr()` and `fill_dir()`.
+- **allow_other:** Since it effectively runs as the dedicated `satfs` user, this option allows access to the mountpoint.
+
+Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
 
 Example on how to run SatFS:
-```sh
-sudo satfs -f -o fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml mountpoint
-```
 
-This will use FSUID/FSGID 1000 to access `mountpoint`, and apply the given configuration
+    ```sh
+    sudo satfs -f -o fsuid=1000,fsgid=1000,dropuid=999,dropgid=999,conf=/path/to/your_conf.yml mountpoint
+    ```
 
-#### Using fstab
+This command uses FSUID/FSGID `1000/1000` to access `mountpoint` (which should be owned by `1000/1000`) and applies the given configuration.
 
-To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount satfs early):
+### Using fstab
+
+To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount SatFS early):
 
 ```fstab
 none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml 0 0
-```
+
+
+In this example, dropuid/dropgid will be UID/GID of the `satfs` system user.
+
+#### Interactive popups (optional)
+To enable communication with your desktop environment for interactive popups (see `ask:` in [CONFIG.md](CONFIG.md)), run the following command:
+
+    xhost +SI:localuser:satfs
 
 
 ## Threat Model & Caveats
 
 This filesystem is designed to restrict access to private documents from unauthorized (non-root) applications.
-To prevent being abused (e.g., being killed by same UID, non-privileged user), it must be started as root. It drops all capabilities except `CAP_SETUID`, `CAP_SETGID`, and `CAP_SYS_PTRACE` (the latter being used with `readlink()` to resolve `/proc/PID/exe`). It also drop privileges (EUID and FSUID) to the uid given on the command line (same for EGID/FSGID and gid).
+To prevent abuse (e.g., being killed by same UID, non-privileged user), it must be started as root. It drops all capabilities except `CAP_SYS_PTRACE` (`readlink()` to resolve `/proc/PID/exe`). It also drops privileges by setting the RUID/SUID to the provided `dropuid` (or uid of system user "satfs") and the EUID/FSUID to the provided `fsuid` (and similarly for the group IDs).
 
 It should not be considered a bulletproof security solution by any means and has several limitations:
 

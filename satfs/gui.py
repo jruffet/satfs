@@ -18,15 +18,26 @@ class DesktopAdapter:
     def pre_exec(self) -> None:
         # TODO: put those in config
         os.environ["DISPLAY"] = ":0"
+        os.environ["HOME"] = "/dev/null"
+        os.environ["XDG_RUNTIME_DIR"] = "/dev/null"
         os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
-        os.environ["XDG_RUNTIME_DIR"] = f"/run/user/{config.uid}"
-        set_privileges(uid=config.uid, gid=config.gid, caps=[], clear_groups=True)
+        set_privileges(
+            ruid=config.dropuid,
+            rgid=config.dropgid,
+            suid=config.dropuid,
+            sgid=config.dropgid,
+            euid=config.dropuid,
+            egid=config.dropgid,
+            fsuid=config.dropuid,
+            fsgid=config.dropgid,
+            caps=[],
+        )
         signal.alarm(config.ask_dialog_timeout)
 
     def ask_user(self, title: str, msg: str) -> bool:
         kdialog = "/usr/bin/kdialog"
         zenity = "/usr/bin/zenity"
-
+        breakpoint()
         try:
             if is_executable(kdialog):
                 self.desktop_env = "KDE"

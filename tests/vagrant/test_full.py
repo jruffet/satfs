@@ -16,8 +16,16 @@ def satfs_conf(host):
 
 
 @pytest.fixture
-def satfs_cmd(host, satfs_conf):
-    return f"/vagrant/main.py -o fsuid={uid},fsgid={gid},conf={satfs_conf} {mountpoint}"
+def satfs_drop_uid_gid(host):
+    dropuid = int(host.run("id -u satfs").stdout)
+    dropgid = int(host.run("id -g satfs").stdout)
+    return dropuid, dropgid
+
+
+@pytest.fixture
+def satfs_cmd(host, satfs_conf, satfs_drop_uid_gid):
+    dropuid, dropgid = satfs_drop_uid_gid
+    return f"/vagrant/main.py -o fsuid={uid},fsgid={gid},dropuid={dropuid},dropgid={dropgid},conf={satfs_conf} {mountpoint}"
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -41,27 +49,29 @@ def setup_satfs(host, satfs_cmd):
         )
         host.run(f"touch {mountpoint}/file_no_ext")
         # deploy config and run
-        host.run("rm -rf /etc/satfs && umask 077 && mkdir /etc/satfs")
+        host.run("rm -rf /etc/satfs && umask 027 && mkdir /etc/satfs")
+        host.run("chgrp satfs /etc/satfs")
         host.run("cp -a /vagrant/examples/conf/* /etc/satfs/")
         # cleanup journal for later checks
         host.run("journalctl --rotate --vacuum-time=1s -t satfs")
         # mount satfs
-        host.run(satfs_cmd)
+        assert host.run(satfs_cmd).rc == 0
 
 
-def test_capabilities_and_perms(host):
+def test_capabilities_and_perms(host, satfs_drop_uid_gid):
+    dropuid, dropgid = satfs_drop_uid_gid
     pid = host.run(f"pgrep -f '^satfs {mountpoint}$'").stdout.strip()
     # verify we have only one PID
     assert pid.isnumeric()
 
     with host.sudo():
         pid_caps = host.run(f"getpcaps {pid}").stdout
-        assert "=p cap_setgid,cap_setuid,cap_sys_ptrace+e" in pid_caps
+        assert "=p cap_sys_ptrace+e" in pid_caps
 
         pid_status = host.file(f"/proc/{pid}/status").content_string
         # real, effective, saved, FS
-        assert "Uid:\t0\t1000\t0\t1000" in pid_status
-        assert "Gid:\t0\t1000\t0\t1000" in pid_status
+        assert f"Uid:\t{dropuid}\t1000\t{dropuid}\t1000" in pid_status
+        assert f"Gid:\t{dropgid}\t1000\t{dropgid}\t1000" in pid_status
 
 
 def test_fs_operations(host, satfs_conf):

@@ -33,8 +33,10 @@ def make_mount_private(target: str) -> None:
 
 
 def set_privileges(
-    uid: Optional[int] = None,
-    gid: Optional[int] = None,
+    ruid: Optional[int] = None,
+    rgid: Optional[int] = None,
+    suid: Optional[int] = None,
+    sgid: Optional[int] = None,
     euid: Optional[int] = None,
     egid: Optional[int] = None,
     fsuid: Optional[int] = None,
@@ -56,10 +58,15 @@ def set_privileges(
     if euid is not None:
         os.seteuid(euid)
 
-    if gid is not None:
-        os.setgid(gid)
-    if uid is not None:
-        os.setuid(uid)
+    if rgid is not None and sgid is not None:
+        os.setresgid(rgid, egid if egid is not None else os.getegid(), sgid)
+    elif rgid is not None:
+        os.setregid(rgid, os.getegid())
+
+    if ruid is not None and suid is not None:
+        os.setresuid(ruid, euid if euid is not None else os.geteuid(), suid)
+    elif ruid is not None:
+        os.setreuid(ruid, os.geteuid())
 
     if fsgid is not None:
         libc.setfsgid(fsgid)

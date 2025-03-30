@@ -6,6 +6,7 @@
 #
 
 import os
+import pwd
 import sys
 import fuse
 import signal
@@ -25,9 +26,34 @@ def already_mounted(program_name: str, mountpoint: str) -> bool:
         return any(line.split()[:3] == [program_name, mountpoint, "fuse"] for line in f)
 
 
-def fatal_exit(msg):
+def fatal_exit(msg) -> None:
     print(f"[FATAL] {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def get_system_user_id(name, check_type=None) -> int:
+    try:
+        user_info = pwd.getpwnam(name)
+        id_value = user_info.pw_uid if check_type == "uid" else user_info.pw_gid
+        assert id_value < 1000
+        return id_value
+    except (KeyError, AssertionError):
+        fatal_exit(f"{check_type} not provided and no '{name}' system user/group (ID<1000)")
+
+
+def check_user_allow_other() -> bool:
+    fuse_conf_path = "/etc/fuse.conf"
+
+    try:
+        with open(fuse_conf_path, "r") as file:
+            for line in file:
+                if line.strip().startswith("#") or not line.strip():
+                    continue  # Skip comments and empty lines
+                if "user_allow_other" in line.strip():
+                    return True
+    except FileNotFoundError:
+        fatal_exit(f"{fuse_conf_path} not found")
+    return False
 
 
 def main():
@@ -41,6 +67,9 @@ def main():
     server.parser.add_option(mountopt="conf", metavar="CONF_FILE", help="SatFS configuration file")
     server.parser.add_option(mountopt="fsuid", metavar="UID", help="fsuid to use")
     server.parser.add_option(mountopt="fsgid", metavar="GID", help="fsgid to use")
+    server.parser.add_option(mountopt="dropuid", metavar="UID", help="drop UID (ruid/suid) to this")
+    server.parser.add_option(mountopt="dropgid", metavar="UID", help="drop GID (rgid/sgid) to this")
+
     # force mono-threaded for now, fuse.FuseGetContext() is not guaranteed to be exact otherwise
     server.parser.fuse.multithreaded = False
     server.parse(values=server, errex=1)
@@ -53,6 +82,11 @@ def main():
     # using subtype makes fuse act as if fsname was not defined for some reason...
     # server.fuse_args.optdict["subtype"] = "satfs"
 
+    if not hasattr(server, "dropuid"):
+        server.dropuid = get_system_user_id("satfs", "uid")
+    if not hasattr(server, "dropgid"):
+        server.dropgid = get_system_user_id("satfs", "gid")
+
     if server.fuse_args.mount_expected():
         if sys.version_info < MIN_PYTHON_VERSION:
             fatal_exit(f"SatFS requires Python {'.'.join(str(x) for x in MIN_PYTHON_VERSION)} or higher")
@@ -60,8 +94,11 @@ def main():
             assert hasattr(server, "conf"), "Configuration file path must be specified (-o conf)"
             assert hasattr(server, "fsuid"), "FSUID must be specified (-o fsuid)"
             assert hasattr(server, "fsgid"), "FSGID must be specified (-o fsgid)"
-            assert int(server.fsuid) != 0, "UID must be non-root"
-            assert int(server.fsgid) != 0, "GID must be non-root"
+            assert int(server.fsuid) != 0, "FSUID must be non-root"
+            assert int(server.fsgid) != 0, "FSGID must be non-root"
+            assert int(server.dropuid) != 0, "Drop UID must be non-root"
+            assert int(server.dropgid) != 0, "Drop GID must be non-root"
+            assert check_user_allow_other(), "'user_allow_other' must be set in /etc/fuse.conf"
             assert server.fuse_args.mountpoint is not None, "Mountpoint not provided"
         except AssertionError as e:
             fatal_exit(e)
@@ -71,20 +108,25 @@ def main():
         mountpoint = server.fuse_args.mountpoint
 
         config.set_config_file(server.conf)
-        config.uid = int(server.fsuid)
-        config.gid = int(server.fsgid)
+        config.fsuid = int(server.fsuid)
+        config.fsgid = int(server.fsgid)
+        config.dropuid = int(server.dropuid)
+        config.dropgid = int(server.dropgid)
         config.mountpoint = mountpoint
 
-        # keep real/saved UID/GID to 0 to prevent non-priv to umount or SIGKILL us
+        # keep real/saved UID/GID to dropuid/dropgid to prevent other non-priv to umount or SIGKILL us
         # keep CAP_SYS_PTRACE to be able to readlink() all /proc/PID/exe
-        # keep CAP_SETUID/CAP_SETGID to be able to setuid()/setfsuid() later on (interactive popup)
         process.set_privileges(
-            euid=config.uid,
-            egid=config.gid,
-            fsuid=config.uid,
-            fsgid=config.gid,
+            euid=config.fsuid,
+            egid=config.fsgid,
+            fsuid=config.fsuid,
+            fsgid=config.fsgid,
+            ruid=config.dropuid,
+            rgid=config.dropgid,
+            suid=config.dropuid,
+            sgid=config.dropgid,
             clear_groups=True,
-            caps=["CAP_SYS_PTRACE", "CAP_SETUID", "CAP_SETGID"],
+            caps=["CAP_SYS_PTRACE"],
         )
         # Ignore SIGINT (KeyboardInterrupt)
         signal.signal(signal.SIGINT, signal.SIG_IGN)

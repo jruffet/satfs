@@ -6,6 +6,7 @@
 import subprocess
 import prctl
 import os
+import pwd
 import socket
 import pytest
 import psutil
@@ -60,55 +61,111 @@ def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
 @pytest.mark.parametrize(
     "uid, gid, fsuid, fsgid, caps",
     [
-        (0, 0, 1000, 1000, ["CAP_SYS_PTRACE"]),
-        (0, 0, 0, 0, ["CAP_SYS_PTRACE"]),
-        (999, 999, 999, 999, ["CAP_CHOWN"]),
+        (999, 998, 1000, 1000, ["CAP_SYS_PTRACE"]),
+        (123, 345, 567, 789, ["CAP_CHOWN"]),
     ],
 )
 def test_set_privileges(uid, gid, fsuid, fsgid, caps):
-    process.set_privileges(uid=uid, gid=gid, fsuid=fsuid, fsgid=fsgid, caps=caps)
+    process.set_privileges(
+        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=fsuid, egid=fsgid, fsuid=fsuid, fsgid=fsgid, caps=caps
+    )
     validate_privileges(
-        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=uid, egid=gid, fsuid=fsuid, fsgid=fsgid, caps=caps
+        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=fsuid, egid=fsgid, fsuid=fsuid, fsgid=fsgid, caps=caps
     )
 
 
 def test_set_privileges_multiple():
-    satfs_caps = ["CAP_SETUID", "CAP_SETGID", "CAP_SYS_PTRACE"]
+    fsuid = pwd.getpwnam("vagrant").pw_uid
+    fsgid = pwd.getpwnam("vagrant").pw_gid
+    dropuid = pwd.getpwnam("satfs").pw_uid
+    dropgid = pwd.getpwnam("satfs").pw_gid
+    satfs_caps = ["CAP_SYS_PTRACE"]
 
     # main.py
-    process.set_privileges(euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps)
+    process.set_privileges(
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=fsuid,
+        fsgid=fsgid,
+        caps=satfs_caps,
+        clear_groups=True,
+    )
     validate_privileges(
-        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=fsuid,
+        fsgid=fsgid,
+        caps=satfs_caps,
     )
 
     # config read
-    process.set_privileges(fsuid=0, fsgid=0)
+    process.set_privileges(fsuid=dropuid, fsgid=dropgid)
     validate_privileges(
-        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=0, fsgid=0, caps=satfs_caps
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=dropuid,
+        fsgid=dropgid,
+        caps=satfs_caps,
     )
 
     # finished reading config
-    process.set_privileges(fsuid=1234, fsgid=1234)
+    process.set_privileges(fsuid=fsuid, fsgid=fsgid)
     validate_privileges(
-        ruid=0, rgid=0, suid=0, sgid=0, euid=1234, egid=1234, fsuid=1234, fsgid=1234, caps=satfs_caps
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=fsuid,
+        fsgid=fsgid,
+        caps=satfs_caps,
     )
 
     # gui interactive dialog (after fork() in satfs)
-    process.set_privileges(uid=1000, gid=1000, caps=[], clear_groups=True)
+    process.set_privileges(
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=dropuid,
+        egid=dropgid,
+        fsuid=dropuid,
+        fsgid=dropgid,
+        caps=[],
+    )
     # check forked process
     id = subprocess.run("id", capture_output=True)
-    assert id.stdout.strip() == b"uid=1000(vagrant) gid=1000(vagrant) groups=1000(vagrant)"
-
+    assert id.stdout.strip().decode() == f"uid={dropuid}(satfs) gid={dropgid}(satfs) groups={dropgid}(satfs)"
+    validate_privileges(
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=dropuid,
+        egid=dropgid,
+        fsuid=dropuid,
+        fsgid=dropgid,
+        caps=[],
+    )
     # this should fail now that we are not root anymore
     with pytest.raises(PermissionError):
-        process.set_privileges(uid=0, gid=0)
+        process.set_privileges(euid=0, egid=0)
 
     with pytest.raises(PermissionError):
-        process.set_privileges(fsuid=1234, fsgid=1234)
-
-    validate_privileges(
-        ruid=1000, rgid=1000, suid=1000, sgid=1000, euid=1000, egid=1000, fsuid=1000, fsgid=1000, caps=[]
-    )
+        process.set_privileges(fsuid=666, fsgid=666)
 
 
 def test_set_dumpable():

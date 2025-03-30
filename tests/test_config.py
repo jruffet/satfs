@@ -21,8 +21,10 @@ def setup(request):
     conf_path = request.param
     config = Config()
     config.set_config_file(conf_path)
-    config.uid = 1001
-    config.gid = 1001
+    config.fsuid = 1001
+    config.fsgid = 1001
+    config.dropuid = 999
+    config.dropgid = 999
     with mock.patch("satfs.config.set_privileges", return_value=0):
         config.load()
     with open(conf_path, "r") as f:
@@ -32,7 +34,7 @@ def setup(request):
 
 def test_load_raises(setup):
     _, _, config = setup
-    config.uid = 99999
+    config.dropuid = 99999
 
     # setfsgid() should fail
     with pytest.raises(PermissionError):
@@ -69,8 +71,8 @@ def test_rules(setup):
     assert rule["name"] == "video files"
     assert "open_write" not in rule["operations"]
     assert rule["operations"]["open_read"] == {
-        f"allow:mplayer[{config.uid}]",
-        f"allow:vlc[{config.uid}]",
+        f"allow:mplayer[{config.fsuid}]",
+        f"allow:vlc[{config.fsuid}]",
     }
 
 
@@ -103,7 +105,7 @@ def test_ask_cache(setup):
 
 def test_init_path_to_ipn(setup):
     path, _, config = setup
-    assert config.init_path_to_ipn(("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session"), config.uid) is None
+    assert config.init_path_to_ipn(("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session"), config.fsuid) is None
 
     if "bookworm" in path:
         base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
