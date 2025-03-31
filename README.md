@@ -83,25 +83,42 @@ sudo pip install .
 
 
 ### Running SatFS
+Satfs provides command line options to specify the values for `dropuid` and `dropgid`. You can configure these in one of two ways:
 
-Before running SatFS, create a system user and group named `satfs`:
+1. **Using a dedicated system user and group:**
+   Create a system user and group named `satfs`, and let satfs automatically use this user if `dropuid` and `dropgid` are not provided.
 
-    ```sh
-    sudo groupadd --system satfs
-    sudo useradd --system --gid satfs --shell /usr/sbin/nologin --create-home satfs
-    ```
+2. **Providing arbitrary values:**
+   Directly supply custom values for `dropuid` and `dropgid` in the command line.
 
-Use the UID and GID of `satfs` (obtain them with `id satfs`) as the values for `dropuid` and `dropgid` when running SatFS.
+#### Using the dedicated satfs system user/group
 
-If `dropuid` and `dropgid` are not provided, SatFS will automatically use the UID/GID of the `satfs` user (which must be a system user with UID/GID less than 1000). Afterward, ensure the configuration file is readbable by the `satfs` user or group.
+If you choose this method, create the `satfs` user and group with the following commands:
 
+```sh
+sudo groupadd --system satfs
+sudo useradd --system --gid satfs --shell /usr/sbin/nologin satfs
+```
+
+In this case, there is no need to manually retrieve the uid and gid; if `dropuid` and `dropgid` are omitted, satfs will automatically use the `satfs` user's uid and gid.
+
+#### Providing arbitrary values
+
+Alternatively, you can bypass creating the `satfs` user by specifying your own values for `dropuid` and `dropgid` directly as command line arguments.
+
+#### Additional details
+
+- If `dropuid` and `dropgid` are not explicitly provided, satfs defaults to using the uid and gid of the `satfs` user (which should have values less than 1000).
+- Ensure that your configuration file is readable by the user or group associated with these ids.
+
+#### Operation
 Run `satfs` in the foreground (with `-f`) or background (without).
 
 Logs go to stderr (if in foreground) and journald. Log level is adjusted in the configuration file.
 
 The filesystem is mounted with the provided `fsuid`/`fsgid` and configuration file.
 
-**Note:** Below example is designed to protect a directory that belongs to user/group `1000/1000`, adjust accordingly.
+#### FUSE options
 
 The following FUSE options are enforced:
 
@@ -112,13 +129,15 @@ The following FUSE options are enforced:
 
 Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
 
-Example on how to run SatFS:
+Below example is designed to protect a directory that belongs to user/group `1000/1000`, adjust accordingly.
 
     ```sh
     sudo satfs -f -o fsuid=1000,fsgid=1000,dropuid=999,dropgid=999,conf=/path/to/your_conf.yml mountpoint
     ```
 
 This command uses FSUID/FSGID `1000/1000` to access `mountpoint` (which should be owned by `1000/1000`) and applies the given configuration.
+
+In this scenario, satfs will drop RUID/SUID to `999/999`.
 
 #### Using fstab
 
@@ -131,10 +150,11 @@ none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf
 In this example, dropuid/dropgid will be UID/GID of the `satfs` system user.
 
 #### Interactive popups (optional)
-To enable communication with your desktop environment for interactive popups (see `ask:` in [CONFIG.md](CONFIG.md)), run the following command:
+To enable communication with your desktop environment for interactive dialogs (see `ask:` in [CONFIG.md](CONFIG.md)), run the following command:
 
     xhost +SI:localuser:satfs
 
+Otherwise, if there is a `ask:` element in a rule and satfs can't create an interactive dialog on the desktop when this matches, then the request will be denied (`ask:` then behaves like `deny:`)
 
 ## Security
 ### Privilege management
