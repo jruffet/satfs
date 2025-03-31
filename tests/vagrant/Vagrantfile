@@ -22,7 +22,7 @@ Vagrant.configure("2") do |config|
 
         sed 's/^#user_allow_other/user_allow_other/' -i /etc/fuse.conf
         groupadd --system satfs
-        useradd --system --gid satfs --shell /usr/sbin/nologin --create-home satfs
+        useradd --system --gid satfs --shell /usr/sbin/nologin satfs
         mkdir /mnt/satfs && chown vagrant:vagrant /mnt/satfs
       SHELL
     end
