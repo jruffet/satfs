@@ -100,13 +100,13 @@ SatFS requires 3 options to be present:
 
 SatFS also provides command line options to specify the values for `dropuid` and `dropgid`. You can configure these in one of two ways:
 
-1. **Using a dedicated system user and group:**
+1. **Recommended: Using a dedicated system user and group:**
    Create a system user and group named `satfs`, and let satfs automatically use this user if `dropuid` and `dropgid` are not provided.
 
 2. **Providing arbitrary values:**
    Directly supply custom values for `dropuid` and `dropgid` in the command line.
 
-#### Using the dedicated satfs system user/group
+#### Using the recommended dedicated satfs system user/group
 
 If you choose this method, create the `satfs` user and group with the following commands:
 
