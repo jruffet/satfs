@@ -83,7 +83,24 @@ sudo pip install .
 
 
 ### Running SatFS
-Satfs provides command line options to specify the values for `dropuid` and `dropgid`. You can configure these in one of two ways:
+#### FUSE options
+
+The following FUSE options are enforced:
+
+- **nonempty:** Because the whole idea is to protect an existing directory.
+- **default_permissions:** This ensures that the kernel checks permissions to avoid security risks.
+- **use_ino:** To show hardlinks correctly and not confuse tools relying on inodes.
+- **allow_other:** Since it effectively runs as the dedicated `satfs` user, this option allows access to the mountpoint by the user (which UID/GID will likely be the prodivided `-o fsuid/fsgid`)
+
+Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
+
+#### SatFS options
+SatFS requires 3 options to be present:
+- **fsuid:** The FSUID to use for all operations on the mountpoint.
+- **fsgid:** The FSGID to use for all operations on the mountpoint.
+- **mountpoint:** Well... The mountpoint ;)
+
+SatFS also provides command line options to specify the values for `dropuid` and `dropgid`. You can configure these in one of two ways:
 
 1. **Using a dedicated system user and group:**
    Create a system user and group named `satfs`, and let satfs automatically use this user if `dropuid` and `dropgid` are not provided.
@@ -118,16 +135,7 @@ Logs go to stderr (if in foreground) and journald. Log level is adjusted in the 
 
 The filesystem is mounted with the provided `fsuid`/`fsgid` and configuration file.
 
-#### FUSE options
 
-The following FUSE options are enforced:
-
-- **nonempty:** Because the whole idea is to protect an existing directory.
-- **default_permissions:** This ensures that the kernel checks permissions to avoid security risks.
-- **use_ino:** Honors the `st_ino` field in kernel functions `getattr()` and `fill_dir()`.
-- **allow_other:** Since it effectively runs as the dedicated `satfs` user, this option allows access to the mountpoint.
-
-Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
 
 Below example is designed to protect a directory that belongs to user/group `1000/1000`, adjust accordingly.
 
