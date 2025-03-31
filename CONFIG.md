@@ -115,6 +115,8 @@ Defines access control rules based on file paths.
 - **inherit** (optional, boolean, default: `true`): When set to `false`, no further rules are processed after a match.
 - **errno** (optional, integer): Error code returned when access is denied. The first matching rule with an `errno` applies.
 
+`path`/`regex_path` start from the provided mountpoint. So if satfs is mounted over `/some/example`, then `/` in the config is `/some/example`.
+
 For each entry in `init_paths` or a group (e.g., `media_players`), if no additional permission action is specified, it is implicitly interpreted as:
 
 ```
@@ -141,13 +143,14 @@ rules:
     perms:
       list_read:
         - media_players
-    inherit: false
 
   - name: mountpoint
     path: /
     perms:
       list: ['ANY', 'ANY[0]']
 ```
+
+With satfs, you have to explicitely grant operation `list_entry` to a file/dir for it to be listed, so unless you belong to `media_players`, the last bit will list an empty directory (`.` and `..`) for the mountpoint, because `list` is only granted on `/` here.
 
 # Permissions and Operations
 
