@@ -31,7 +31,7 @@ class TTLCache:
         return result
 
     def __setitem__(self, key: Any, value: Any) -> None:
-        """Store a value in the cache with the current timestamp."""
+        """Store a value in the cache with the current timestamp"""
         self.cache[key] = (value, time.time())
 
     def __delitem__(self, key: Any) -> None:

@@ -33,6 +33,8 @@ def make_mount_private(target: str) -> None:
 
 
 def set_privileges(
+    uid: Optional[int] = None,
+    gid: Optional[int] = None,
     ruid: Optional[int] = None,
     rgid: Optional[int] = None,
     suid: Optional[int] = None,
@@ -44,6 +46,28 @@ def set_privileges(
     caps: Optional[List[str]] = None,
     clear_groups: Optional[bool] = None,
 ) -> None:
+    """
+    Sets user and group privileges for the current process
+
+    Parameters:
+        uid: if provided, sets all user-related IDs (ruid, suid, euid, fsuid) to this value
+        gid: if provided, sets all group-related IDs (rgid, sgid, egid, fsgid) to this value
+        ruid: real user ID to set
+        rgid: real group ID to set
+        suid: saved user ID to set
+        sgid: saved group ID to set
+        euid: effective user ID to set
+        egid: effective group ID to set
+        fsuid: filesystem user ID to set
+        fsgid: filesystem group ID to set
+        caps: list of capability names to set in the effective capability set
+        clear_groups: if true, clears all supplementary groups
+    """
+
+    if uid is not None:
+        ruid, suid, euid, fsuid = uid, uid, uid, uid
+    if gid is not None:
+        rgid, sgid, egid, fsgid = gid, gid, gid, gid
 
     try:
         prctl.securebits.no_setuid_fixup = True

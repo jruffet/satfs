@@ -38,6 +38,10 @@ class Validator:
     def __call__(self, decorated_function: Callable) -> Callable:
         @wraps(decorated_function)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            if not config.fs_init:
+                logger.critical("Validator called without fsinit() completed, this should not happen!")
+                return -fuse.EPERM
+
             config.reload_if_needed()
 
             self.operation = decorated_function.__name__
@@ -124,7 +128,7 @@ class Validator:
 
         path = append_slash_if_dir(path)
 
-        init_path = get_init_path(context_pid)
+        init_path = get_init_path(pid=context_pid)
         if init_path is None:
             return self.ruling(path=path, ret=config.errno, msg="Could not compute init_path")
 

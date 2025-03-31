@@ -1,4 +1,4 @@
-# SatFS Configuration Documentation
+# SatFS Configuration
 
 ## Overview
 This document describes the YAML-based configuration system for the FUSE filesystem. The configuration consists of multiple sections that define global settings, process execution chains, access rules, and permissions.
@@ -13,9 +13,9 @@ For example:
 This mechanism allows modular configurations by including predefined permission definitions. In our example, the included `perms.yml` is treated as an integral part of the configuration.
 
 
-## Configuration File Structure
+## Sections
 
-### 1. Global Configuration (`config`)
+### Global configuration (`config`)
 The `config` section defines general settings.
 
 The following defaults are used if a key is not provided:
@@ -40,30 +40,51 @@ config:
   ask_dialog_timeout: 10
 ```
 
-# 2. Lineage (`init_paths`)
+### Lineage (`init_paths`)
 Defines execution chains for processes, tracing the lineage back to init.
 
-## Fields:
+#### Fields:
 - **`names`** (mandatory, dictionary): Maps process names to lists of allowed binary paths.
 - **`groups`** (optional, dictionary): Defines reusable groups of process names for use in rules.
 
-## Matching Behavior:
+#### Matching behavior:
 Entries in `names` are tried in order, and the first match wins. This means it is better to place more specific rules first and use wildcards at the end.
 
-## Wildcards:
+#### Wildcards:
 - **Glob Wildcards:**
   - The glob wildcard `*` is allowed.
   - The glob wildcard `**` is not allowed.
+
+`comm:` entries (see below) are not matched against glob wildcards, they need to be a perfect match.
+
 - **Special Wildcard (`***`):**
   - `***` has a special meaning and can only be used at the end. It represents anything (either nothing or any lineage).
 
-## Example:
+
+#### Examples
+
+
+##### satfs non-privileged (default):
 ```yaml
 init_paths:
   names:
+    login_bash_any_bin: ['comm[0]:login', '/usr/bin/bash', '/usr/bin/*']
+    vlc: ['comm:systemd', '/usr/bin/vlc']
+    mplayer: ['comm:systemd', '/usr/bin/mplayer']
+    any_crontab: [comm:cron', '***']
+  groups:
+    media_players:
+      - vlc
+      - mplayer
+```
+
+##### satfs launched with `-o privileged`:
+```yaml
+init_paths:
+  names:
+    login_bash_any_bin: ['/usr/bin/login', '/usr/bin/bash', '/usr/bin/*']
     vlc: ['/usr/lib/systemd/systemd', '/usr/bin/vlc']
     mplayer: ['/usr/lib/systemd/systemd', '/usr/bin/mplayer']
-    ssh_any_bin: ['/usr/sbin/sshd', '/usr/bin/*']
     any_crontab: ['/usr/sbin/cron', '***']
   groups:
     media_players:
@@ -71,7 +92,18 @@ init_paths:
       - mplayer
 ```
 
-### 3. Rules (`rules`)
+
+
+The `comm:*` entries appear in non-privileged mode (default) when the system fails to read the executable path via `/proc/PID/exe` (using `readlink`) and instead falls back to reading the process name from `/proc/PID/comm`.
+
+For example, in `comm[0]:login`, the `[0]` indicates that the process's UID is `0`, meaning the UID from `/proc/PID/comm` differs from the provided FSUID.
+
+In a privileged setup (which uses `CAP_SYS_PTRACE`), the executable path is always accessible via `/proc/PID/exe`, so you would never use a `comm:*` entry.
+
+To get those entries, you can look at the logs (`journalctl -t satfs`)
+
+
+### Rules (`rules`)
 Defines access control rules based on file paths.
 
 #### Fields:
@@ -119,7 +151,7 @@ rules:
 
 ## Permissions and Operations
 
-### 1. Meta-Operations (`perms`)
+### Meta-Operations (`perms`)
 Meta-operations (or abstract permission sets) group lower-level operations into higher-level permission definitions. These permission sets are referenced in the rules section to specify what actions are allowed, denied, or require further handling. Their arrangement can be customized to suit your needs.
 
 Below is an example:
@@ -138,7 +170,7 @@ perms:
   all: [stat, list, file_read, file_write, dir_write, metadata_write]
 ```
 
-### 2. FUSE Operations (`operations`)
+### FUSE Operations (`operations`)
 FUSE operations define the concrete system calls and actions that the filesystem supports. These definitions are used by the meta-operations in the `perms` section. In other words, the meta-operations map to one or more FUSE operations, allowing you to group and manage them at a higher level. Their arrangement is also customizable.
 
 For example:
@@ -153,16 +185,13 @@ operations:
   metadata_write: [chmod, chown, utime]
 ```
 
-
-
-## Rule Processing Order
+## Rule processing order
 1. Rules are evaluated sequentially.
 2. If a rule with `inherit: false` matches, no further rules are processed.
 3. The first matching rule with an `errno` value determines the error code for denied access.
 4. Permissions from matching rules are merged unless a rule stops processing via `inherit: false`.
 
-
-## Example Workflow
+## Example workflow
 1. A process running under `/usr/bin/dash` attempts to list a directory.
 2. Its execution chain is verified against the defined `init_paths`.
 3. The directory path is matched against the `rules`.

@@ -59,18 +59,34 @@ def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
 
 
 @pytest.mark.parametrize(
-    "uid, gid, fsuid, fsgid, caps",
+    "dropuid, dropgid, fsuid, fsgid, caps",
     [
         (999, 998, 1000, 1000, ["CAP_SYS_PTRACE"]),
         (123, 345, 567, 789, ["CAP_CHOWN"]),
     ],
 )
-def test_set_privileges(uid, gid, fsuid, fsgid, caps):
+def test_set_privileges(dropuid, dropgid, fsuid, fsgid, caps):
     process.set_privileges(
-        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=fsuid, egid=fsgid, fsuid=fsuid, fsgid=fsgid, caps=caps
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=fsuid,
+        fsgid=fsgid,
+        caps=caps,
     )
     validate_privileges(
-        ruid=uid, rgid=gid, suid=uid, sgid=gid, euid=fsuid, egid=fsgid, fsuid=fsuid, fsgid=fsgid, caps=caps
+        ruid=dropuid,
+        rgid=dropgid,
+        suid=dropuid,
+        sgid=dropgid,
+        euid=fsuid,
+        egid=fsgid,
+        fsuid=fsuid,
+        fsgid=fsgid,
+        caps=caps,
     )
 
 
@@ -79,6 +95,7 @@ def test_set_privileges_multiple():
     fsgid = pwd.getpwnam("vagrant").pw_gid
     dropuid = pwd.getpwnam("satfs").pw_uid
     dropgid = pwd.getpwnam("satfs").pw_gid
+    # privileged mode
     satfs_caps = ["CAP_SYS_PTRACE"]
 
     # main.py
@@ -136,14 +153,8 @@ def test_set_privileges_multiple():
 
     # gui interactive dialog (after fork() in satfs)
     process.set_privileges(
-        ruid=dropuid,
-        rgid=dropgid,
-        suid=dropuid,
-        sgid=dropgid,
-        euid=dropuid,
-        egid=dropgid,
-        fsuid=dropuid,
-        fsgid=dropgid,
+        uid=dropuid,
+        gid=dropgid,
         caps=[],
     )
     # check forked process
@@ -160,7 +171,7 @@ def test_set_privileges_multiple():
         fsgid=dropgid,
         caps=[],
     )
-    # this should fail now that we are not root anymore
+
     with pytest.raises(PermissionError):
         process.set_privileges(euid=0, egid=0)
 

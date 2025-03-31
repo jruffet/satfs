@@ -1,7 +1,7 @@
 #!include common/perms.yml
 
 config:
-  name: debian-testing
+  name: debian-trixie-privileged
   log_level: INFO
   log_level_deny_list_entry: WARNING
   enforce: true
@@ -9,6 +9,7 @@ config:
   ask_cache_ttl: 7
   ask_dialog_timeout: 11
 
+# "-o privileged" version
 init_paths:
   names:
     # no wildcard first
@@ -17,7 +18,6 @@ init_paths:
     vagrant_sudo_ls: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/sudo', '/usr/bin/dash', '/usr/bin/ls']
     vlc: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-vlc']
     mplayer: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-mplayer']
-
     any_fake: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/local/bin/fake-*']
     # matches anything launched by "dash" under the lineage
     vagrant_dash: ['/usr/sbin/sshd', '/usr/lib/openssh/sshd-session', '/usr/lib/openssh/sshd-session', '/usr/bin/dash', '***']

@@ -1,17 +1,27 @@
 # SPDX-License-Identifier: MIT
 
 import pytest
+import re
 
 uid, gid = 1000, 1000
 mountpoint = "/mnt/satfs"
 
 
+# Run all tests twice: privileged + unpriv
+@pytest.fixture(params=[False, True], ids=["unpriv", "privileged"])
+def use_privileged(request):
+    return request.param
+
+
 @pytest.fixture
-def satfs_conf(host):
+def satfs_conf(host, use_privileged):
     hostname = host.backend.get_hostname()
-    for distro in ["debian-bookworm", "debian-testing"]:
+    priv = "unpriv"
+    if use_privileged:
+        priv = "privileged"
+    for distro in ["debian-bookworm", "debian-trixie"]:
         if distro in hostname:
-            return f"/etc/satfs/vagrant-{distro}.yml"
+            return f"/etc/satfs/vagrant-{distro}-{priv}.yml"
     pytest.fail(f"Unsupported hostname or path not recognized: {hostname}")
 
 
@@ -23,9 +33,12 @@ def satfs_drop_uid_gid(host):
 
 
 @pytest.fixture
-def satfs_cmd(host, satfs_conf, satfs_drop_uid_gid):
+def satfs_cmd(host, satfs_conf, satfs_drop_uid_gid, use_privileged):
     dropuid, dropgid = satfs_drop_uid_gid
-    return f"/vagrant/main.py -o fsuid={uid},fsgid={gid},dropuid={dropuid},dropgid={dropgid},conf={satfs_conf} {mountpoint}"
+    cmd = f"/vagrant/main.py -o fsuid={uid},fsgid={gid},dropuid={dropuid},dropgid={dropgid},conf={satfs_conf} {mountpoint}"
+    if use_privileged:
+        cmd += " -o privileged"
+    return cmd
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -52,21 +65,22 @@ def setup_satfs(host, satfs_cmd):
         host.run("rm -rf /etc/satfs && umask 027 && mkdir /etc/satfs")
         host.run("chgrp satfs /etc/satfs")
         host.run("cp -a /vagrant/examples/conf/* /etc/satfs/")
-        # cleanup journal for later checks
-        host.run("journalctl --rotate --vacuum-time=1s -t satfs")
         # mount satfs
         assert host.run(satfs_cmd).rc == 0
 
 
-def test_capabilities_and_perms(host, satfs_drop_uid_gid):
+def test_capabilities_and_perms(host, satfs_drop_uid_gid, use_privileged):
     dropuid, dropgid = satfs_drop_uid_gid
     pid = host.run(f"pgrep -f '^satfs {mountpoint}$'").stdout.strip()
     # verify we have only one PID
     assert pid.isnumeric()
 
     with host.sudo():
-        pid_caps = host.run(f"getpcaps {pid}").stdout
-        assert "=p cap_sys_ptrace+e" in pid_caps
+        pid_caps = host.run(f"getpcaps {pid}").stdout.strip()
+        if use_privileged:
+            assert pid_caps.endswith("=p cap_sys_ptrace+e")
+        else:
+            assert pid_caps.endswith("=p")
 
         pid_status = host.file(f"/proc/{pid}/status").content_string
         # real, effective, saved, FS
@@ -227,22 +241,23 @@ def test_mount_twice(host, satfs_cmd):
         assert "[FATAL] satfs already mounted" in host.run(satfs_cmd).stderr
 
 
-def test_kill(host):
+def test_abuse(host):
     kill_cmd = host.run("kill -9 $(pidof satfs)")
     assert kill_cmd.rc == 1
     assert "Operation not permitted" in kill_cmd.stderr
 
+    assert host.run("strace -p $(pidof satfs)").rc == 1
 
-def test_umount(host):
     assert host.run(f"fusermount -u {mountpoint}").rc == 1
     assert host.run(f"umount {mountpoint}").rc == 32
 
+    cd_satfs_cwd = host.run("cd /proc/$(pidof satfs)/cwd")
+    assert cd_satfs_cwd.rc == 1
+    assert "Permission denied" in cd_satfs_cwd.stderr
 
-def test_strace(host):
-    assert host.run("strace -p $(pidof satfs)").rc == 1
 
-
-def test_cd_proc_cwd(host):
-    cd_pid_cwd = host.run("cd /proc/$(pidof satfs)/cwd")
-    assert cd_pid_cwd.rc == 1
-    assert "Permission denied" in cd_pid_cwd.stderr
+def test_journal(host, satfs_conf):
+    conf_name = re.sub(r".*/vagrant-(.*)\.yml", r"\1", satfs_conf)
+    with host.sudo():
+        journal_cmd = host.run("journalctl -t satfs -n 1")
+    assert f"[{conf_name}] *** SatFS mounted ***" in journal_cmd.stdout

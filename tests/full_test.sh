@@ -29,8 +29,8 @@ pytest -v
 
 cd vagrant
 
-for distro in debian-bookworm64 debian-testing64; do
-    box_name="${BOX_PREFIX}${distro}"
+box_names=$(vagrant status --machine-readable | grep ',state,' | cut -d',' -f2)
+for box_name in $box_names; do
     echo "[+] remote pytest ($box_name)"
     vagrant ssh $box_name -c "sudo pytest /vagrant/tests/vagrant/remote/ -v --noconftest -p no:cacheprovider --forked"
     echo "[+] testinfra ($box_name)"

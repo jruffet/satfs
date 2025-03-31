@@ -1,0 +1,28 @@
+#!include common/perms.yml
+
+config:
+  name: debian-bookworm-unpriv
+  log_level: INFO
+  log_level_deny_list_entry: WARNING
+  enforce: true
+  inherit_rules: true
+  ask_cache_ttl: 3
+  ask_dialog_timeout: 20
+
+# non-privileged (no -o privileged) version
+init_paths:
+  names:
+    vagrant_cat: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/bin/cat']
+    vagrant_ls: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/bin/ls']
+    vagrant_sudo_ls: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', 'comm:sudo', 'comm[0]:sh', 'comm[0]:ls']
+    vlc: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/local/bin/fake-vlc']
+    mplayer: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/local/bin/fake-mplayer']
+    any_fake: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/local/bin/fake-*']
+    # matches anything launched by "dash" under the lineage
+    vagrant_dash: ['comm[0]:sshd', 'comm[0]:sshd', 'comm:sshd', '/usr/bin/dash', '***']
+  groups:
+    media_players:
+      - vlc
+      - mplayer
+
+#!include common/vagrant_rules.yml

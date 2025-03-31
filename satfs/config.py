@@ -127,6 +127,7 @@ class Config:
             "path": None,
             "mtime": 0,
         }
+        # defaults
         self.name = None
         self.enforce = True
         self.inherit_rules = False
@@ -138,7 +139,11 @@ class Config:
         self.errno = -fuse.EPERM
 
         self.rules = []
-        self.init_paths = {}
+        self.init_paths = {
+            "names": {},
+            "groups": {},
+        }
+        self.perm_to_operations = {}
 
         # will be set externally
         self.fsuid = None
@@ -146,13 +151,9 @@ class Config:
         self.dropuid = None
         self.dropgid = None
         self.mountpoint = None
-
-        self.init_paths = {
-            "names": {},
-            "groups": {},
-        }
-        self.perm_to_operations = {}
-        self.rules = []
+        self.privileged = False
+        self.fs_init = False
+        self.foreground = False
 
     @contextmanager
     def fs_privileges(self):
@@ -197,7 +198,7 @@ class Config:
             logger.critical(f"ERROR: Config reload fail (rolling back): {type(e).__name__}: {str(e)}")
 
     def preprocess_config_yaml(self) -> str:
-        """Read a YAML file and replace !include directives with actual YAML content."""
+        """Read a YAML file and replace !include directives with actual YAML content"""
         base_dir = os.path.dirname(os.path.abspath(self._config["path"]))
 
         with open(self._config["path"], "r") as f:
@@ -332,13 +333,13 @@ class Config:
             for ipn in self.init_paths["names"]:
                 config_init_path = self.init_paths["names"][ipn]
                 # if not same length, and config_init_path ends with "***"
-                # we will consider both at length of config_init_path (see zip)
+                # we will consider both at length of config_init_path (see zip below)
                 if config_init_path[-1] == "***" or len(init_path) == len(config_init_path):
                     compare_len = (
                         len(config_init_path) - 1 if config_init_path[-1] == "***" else len(config_init_path)
                     )
                     if len(init_path) >= compare_len and all(
-                        pathlib.PurePath(path).match(rule_path)
+                        path == rule_path if "comm" in rule_path else pathlib.PurePath(path).match(rule_path)
                         for path, rule_path in zip(init_path[:compare_len], config_init_path[:compare_len])
                     ):
                         return f"{ipn}[{uid}]"

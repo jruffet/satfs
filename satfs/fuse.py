@@ -17,7 +17,9 @@ import signal
 import fuse
 from fuse import Fuse
 from typing import Optional, Generator, Tuple, Any
+from . import process
 from .validator import Validator
+from .config import config
 
 
 def flags_to_mode(flags: int) -> str:
@@ -41,7 +43,18 @@ class SatFS(Fuse):
         # no need for the child to hold the reference anymore
         if self.child_pid is not None:
             os.kill(self.child_pid, signal.SIGUSR1)
-            os.waitpid(self.child_pid, 0)
+            # in background mode child is re-parented, so os.waitpid() will fail
+            if config.foreground:
+                os.waitpid(self.child_pid, 0)
+
+        # explicitely drop capabilities
+        if config.privileged:
+            process.set_privileges(caps=["CAP_SYS_PTRACE"])
+        else:
+            process.set_privileges(caps=[])
+
+        # if this point is reached, nothing failed above
+        config.fs_init = True
 
     @Validator(path_args_pos=[1])
     def readlink(self, path: str) -> str:

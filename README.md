@@ -17,7 +17,7 @@ This project is built on top of [`python-fuse`](https://github.com/libfuse/pytho
 - **Platform:** This is designed to work solely on Linux
 - **Performance:** Due to FUSE, Python, and single-threading, this filesystem is pretty slow.
 - **Operation Support:** The filesystem supports most standard operations, but some features, such as extended attributes (`xattrs`), are not implemented.
-- **Security Considerations:** This filesystem is not a fully secure sandbox by any means. See [Threat Model & Caveats](#threat-model--caveats) for details.
+- **Security Considerations:** This filesystem is not a fully secure sandbox by any means. See [Security limitations](#security-limitations) for details.
 
 
 ## How It Works
@@ -120,13 +120,13 @@ Example on how to run SatFS:
 
 This command uses FSUID/FSGID `1000/1000` to access `mountpoint` (which should be owned by `1000/1000`) and applies the given configuration.
 
-### Using fstab
+#### Using fstab
 
 To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount SatFS early):
 
 ```fstab
 none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf.yml 0 0
-
+```
 
 In this example, dropuid/dropgid will be UID/GID of the `satfs` system user.
 
@@ -136,17 +136,35 @@ To enable communication with your desktop environment for interactive popups (se
     xhost +SI:localuser:satfs
 
 
-## Threat Model & Caveats
+## Security
+### Privilege management
 
 This filesystem is designed to restrict access to private documents from unauthorized (non-root) applications.
-To prevent abuse (e.g., being killed by same UID, non-privileged user), it must be started as root. It drops all capabilities except `CAP_SYS_PTRACE` (`readlink()` to resolve `/proc/PID/exe`). It also drops privileges by setting the RUID/SUID to the provided `dropuid` (or uid of system user "satfs") and the EUID/FSUID to the provided `fsuid` (and similarly for the group IDs).
+To prevent abuse — such as being killed by a process with the same UID — it must be started as root.
 
-It should not be considered a bulletproof security solution by any means and has several limitations:
+On startup, it drops privileges as follows:
+- **User IDs (UIDs):**
+  - Sets **ruid/suid** to the specified `dropuid` (or the system user `satfs` if none is provided).
+  - Sets **euid/fsuid** to the specified `fsuid`.
+- **Group IDs (GIDs):**
+  - Applies the same privilege drop as for UIDs.
 
-- **Ineffective against root:** A root process can bypass the restrictions entirely, so this filesystem does not protect against privileged attackers.
-- **Bypass via `chdir()` before mount:** If a process changes its working directory (`chdir()`) to the mountpoint **before** the filesystem is mounted, it can still access files directly, circumventing the access controls. This can be mitigated by ensuring the filesystem is mounted before starting any user session.
-- **/proc/PID/exe abuse:** The satfs code is only triggered when a process tries to access a protected directory. This means that malicious code could `fork()` / `execve()` / etc. beforehand to mimic an authorized "init path". It comes with limitations though, but it is something to keep in mind. This could be mitigated by following execve() calls via e.g. eBPF and/or "registering" apps to satfs.
+It drops all capabilities by default. If launched with `-o privileged`, it keeps `CAP_SYS_PTRACE` to allow `readlink()` on any `/proc/PID/exe`.
 
+Without `-o privileged`, if `readlink()` `/proc/PID/exe` fails (usually because you don't own the process) then it falls back to reading `/proc/PID/comm`. If the process's **ruid** differs from `fsuid`, the UID is appended in brackets, e.g., `comm[0]:sshd` would indicate `sshd` owned by `root`.
+
+
+### Security limitations
+
+This is **not** a bulletproof security solution and has several limitations:
+
+- **Root privileges override protections:**
+  A root process can bypass all restrictions, meaning this filesystem does **not** protect against privileged attackers.
+
+- **Pre-mount directory access via `chdir()`:**
+  If a process changes its working directory to the mountpoint **before** the filesystem is mounted, it can still access files directly, bypassing access controls. This is a non-issue if the filesystem is mounted before any user session start.
+
+- **/proc/PID/exe abuse:** The satfs code is only triggered when a process tries to access a protected directory. This means that malicious code could `fork()` / `execve()` / etc. before a file access to mimic an authorized "init path". It comes with limitations though, but it is something to keep in mind. This could be mitigated by following execve() calls via e.g. eBPF and/or "registering" apps to satfs.
 
 ## Use at Your Own Risk
 

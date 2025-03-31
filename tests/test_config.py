@@ -107,12 +107,17 @@ def test_init_path_to_ipn(setup):
     path, _, config = setup
     assert config.init_path_to_ipn(("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session"), config.fsuid) is None
 
-    if "bookworm" in path:
-        base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
-    elif "testing" in path:
-        base = ("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-session")
-    else:
-        pytest.fail("Unsupported distribution")
+    if "trixie" in path:
+        if "privileged" in path:
+            base = ("/usr/sbin/sshd", "/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-session")
+        else:
+            base = ("comm[0]:sshd", "comm[0]:sshd-session", "comm:sshd-session")
+
+    elif "bookworm" in path:
+        if "privileged" in path:
+            base = ("/usr/sbin/sshd", "/usr/sbin/sshd", "/usr/sbin/sshd")
+        else:
+            base = ("comm[0]:sshd", "comm[0]:sshd", "comm:sshd")
 
     assert (
         config.init_path_to_ipn(base + ("/usr/bin/dash", "/usr/bin/kikoo", "/opt/lol"), 1234)

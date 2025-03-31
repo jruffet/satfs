@@ -1,7 +1,7 @@
 #!include common/perms.yml
 
 config:
-  name: debian-bookworm
+  name: debian-bookworm-privileged
   log_level: INFO
   log_level_deny_list_entry: WARNING
   enforce: true
@@ -9,9 +9,9 @@ config:
   ask_cache_ttl: 3
   ask_dialog_timeout: 20
 
+# non-privileged (no -o privileged) version
 init_paths:
   names:
-    # no wildcard first
     vagrant_cat: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/cat']
     vagrant_ls: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/ls']
     vagrant_sudo_ls: ['/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/sbin/sshd', '/usr/bin/sudo', '/usr/bin/dash', '/usr/bin/ls']
