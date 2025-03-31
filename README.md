@@ -20,7 +20,7 @@ This project is built on top of [`python-fuse`](https://github.com/libfuse/pytho
 - **Security Considerations:** This filesystem is not a fully secure sandbox by any means. See [Security limitations](#security-limitations) for details.
 
 
-## How It Works
+## How it works
 SatFS mounts over an existing directory, acting as a protective layer.
 
 By default, all access is denied.
@@ -33,7 +33,7 @@ When a process accesses a file or directory:
 
 **Note:** File operations like `read()` and `write()` on an already open file descriptor are not restricted. SatFS only controls access at the time of opening or performing filesystem operations.
 
-### Process Lineage & Init Path
+### Process lineage & Init Path
 When a process accesses a file or directory, SatFS traces its parent process chain up to `init` (PID 1). This "init path" is matched against access rules in the configuration.
 
 ### Permissions & Operations
@@ -41,23 +41,21 @@ Operations (`unlink()`, `mkdir()`, etc.) are grouped into simplified "permission
 
 A `list_entry` operation has been added to allow for hiding files or directories from selected processes.
 
-### Rules & Access Control
+### Rules & Access control
 Rules define regex-based path matching and specify actions:
 - **allow** – Permit access
 - **deny** – Block access
 - **ask** – Prompt the user interactively via a GTK/QT dialog
 
-### Configuration Auto-Reload
-When the configuration file changes (`mtime` update), SatFS reloads it automatically. Since SatFS is single-threaded, no race conditions occur.
-
+### Configuration auto-reload
+When the configuration file changes (`mtime` update), SatFS reloads it automatically and prints a message in the logs.
 
 ## Configuration
 See [CONFIG.md](CONFIG.md)
 
 See also [examples](examples/conf)
 
-## How to Use
-
+## How to use
 
 ### Installing SatFS
 Clone the repository:
@@ -194,7 +192,7 @@ This is **not** a bulletproof security solution and has several limitations:
 
 - **/proc/PID/exe abuse:** The satfs code is only triggered when a process tries to access a protected directory. This means that malicious code could `fork()` / `execve()` / etc. before a file access to mimic an authorized "init path". It comes with limitations though, but it is something to keep in mind. This could be mitigated by following execve() calls via e.g. eBPF and/or "registering" apps to satfs.
 
-## Use at Your Own Risk
+## Use at your own risk
 
 While it can help restrict unauthorized access to private files, it has inherent limitations (see above).
 
