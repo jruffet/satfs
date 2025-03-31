@@ -68,10 +68,10 @@ Entries in `names` are tried in order, and the first match wins. This means it i
 ```yaml
 init_paths:
   names:
-    login_bash_any_bin: ['comm[0]:login', '/usr/bin/bash', '/usr/bin/*']
+    login_bash_any: ['comm[0]:login', '/usr/bin/bash', '***']
     vlc: ['comm:systemd', '/usr/bin/vlc']
     mplayer: ['comm:systemd', '/usr/bin/mplayer']
-    any_crontab: [comm:cron', '***']
+    opt_stuff_any_bin: ['comm:systemd', '/opt/stuff/bin/*']
   groups:
     media_players:
       - vlc
@@ -82,10 +82,10 @@ init_paths:
 ```yaml
 init_paths:
   names:
-    login_bash_any_bin: ['/usr/bin/login', '/usr/bin/bash', '/usr/bin/*']
+    login_bash_any: ['/usr/bin/login', '/usr/bin/bash', '***']
     vlc: ['/usr/lib/systemd/systemd', '/usr/bin/vlc']
     mplayer: ['/usr/lib/systemd/systemd', '/usr/bin/mplayer']
-    any_crontab: ['/usr/sbin/cron', '***']
+    opt_stuff_any_bin: ['/usr/lib/systemd/systemd', '/opt/stuff/bin/*']
   groups:
     media_players:
       - vlc
