@@ -188,7 +188,7 @@ This is **not** a bulletproof security solution and has several limitations:
   A root process can bypass all restrictions, meaning this filesystem does **not** protect against privileged attackers.
 
 - **Pre-mount directory access via `chdir()`:**
-  If a process changes its working directory to the mountpoint **before** the filesystem is mounted, it can still access files directly, bypassing access controls. This is a non-issue if the filesystem is mounted before any user session start.
+  If a process changes its working directory to the mountpoint **before** satfs is mounted, it can still access files directly, bypassing access controls. This is a non-issue if satfs is mounted before any user session start.
 
 - **/proc/PID/exe abuse:** The satfs code is only triggered when a process tries to access a protected directory. This means that malicious code could `fork()` / `execve()` / etc. before a file access to mimic an authorized "init path". It comes with limitations though, but it is something to keep in mind. This could be mitigated by following execve() calls via e.g. eBPF and/or "registering" apps to satfs.
 
