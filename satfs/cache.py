@@ -19,8 +19,7 @@ class TTLCache:
         self.ttl = new_ttl
 
     def clear(self) -> None:
-        for key in self.cache.keys():
-            del self.cache[key]
+        self.cache = {}
 
     # Make it behave like a dictionary
     def __getitem__(self, key: Any) -> Any:
