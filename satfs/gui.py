@@ -22,8 +22,8 @@ class DesktopAdapter:
             gid=config.dropgid,
             caps=[],
         )
-        os.environ["HOME"] = "/dev/null"
-        os.environ["XDG_RUNTIME_DIR"] = "/dev/null"
+        os.environ.pop("HOME", None)
+        os.environ.pop("XDG_RUNTIME_DIR", None)
         # TODO: put those in config
         os.environ["DISPLAY"] = ":0"
         os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
