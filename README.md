@@ -20,12 +20,12 @@ This project is built on top of [`python-fuse`](https://github.com/libfuse/pytho
 - **Security Considerations:** This filesystem is not a fully secure sandbox by any means. See [Security limitations](#security-limitations) for details.
 
 
-## How it works
+# How it works
 SatFS mounts over an existing directory, acting as a protective layer.
 
 By default, all access is denied.
 
-### Flow overview
+## Flow overview
 When a process accesses a file or directory:
 1. SatFS determines the process's *init path* (see below).
 2. It checks *rules* to see if the requested operation is allowed, denied, or requires confirmation.
@@ -33,31 +33,31 @@ When a process accesses a file or directory:
 
 **Note:** File operations like `read()` and `write()` on an already open file descriptor are not restricted. SatFS only controls access at the time of opening or performing filesystem operations.
 
-### Process lineage & Init Path
+## Process lineage & Init Path
 When a process accesses a file or directory, SatFS traces its parent process chain up to `init` (PID 1). This "init path" is matched against access rules in the configuration.
 
-### Permissions & Operations
+## Permissions & Operations
 Operations (`unlink()`, `mkdir()`, etc.) are grouped into simplified "permissions" for easier rule management.
 
 A `list_entry` operation has been added to allow for hiding files or directories from selected processes.
 
-### Rules & Access control
+## Rules & Access control
 Rules define regex-based path matching and specify actions:
 - **allow** – Permit access
 - **deny** – Block access
 - **ask** – Prompt the user interactively via a GTK/QT dialog
 
-### Configuration auto-reload
+## Configuration auto-reload
 When the configuration file changes (`mtime` update), SatFS reloads it automatically and prints a message in the logs.
 
-## Configuration
+# Configuration
 See [CONFIG.md](CONFIG.md)
 
 See also [examples](examples/conf)
 
-## How to use
+# How to use
 
-### Installing SatFS
+## Installing SatFS
 Clone the repository:
 
 ```sh
@@ -80,8 +80,8 @@ sudo pip install .
 ```
 
 
-### Running SatFS
-#### FUSE options
+# Running SatFS
+## FUSE options
 
 The following FUSE options are enforced:
 
@@ -92,7 +92,7 @@ The following FUSE options are enforced:
 
 Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
 
-#### SatFS options
+## SatFS options
 SatFS requires 3 options to be present:
 - **fsuid:** The FSUID to use for all operations on the mountpoint.
 - **fsgid:** The FSGID to use for all operations on the mountpoint.
@@ -106,7 +106,7 @@ SatFS also provides command line options to specify the values for `dropuid` and
 2. **Providing arbitrary values:**
    Directly supply custom values for `dropuid` and `dropgid` in the command line.
 
-#### Using the recommended dedicated satfs system user/group
+## Using the recommended dedicated satfs system user/group
 
 If you choose this method, create the `satfs` user and group with the following commands:
 
@@ -117,16 +117,16 @@ sudo useradd --system --gid satfs --shell /usr/sbin/nologin satfs
 
 In this case, there is no need to manually retrieve the uid and gid; if `dropuid` and `dropgid` are omitted, satfs will automatically use the `satfs` user's uid and gid.
 
-#### Providing arbitrary values
+## Providing arbitrary values
 
 Alternatively, you can bypass creating the `satfs` user by specifying your own values for `dropuid` and `dropgid` directly as command line arguments.
 
-#### Additional details
+## Additional details
 
 - If `dropuid` and `dropgid` are not explicitly provided, satfs defaults to using the uid and gid of the `satfs` user (which should have values less than 1000).
 - Ensure that your configuration file is readable by the user or group associated with these ids.
 
-#### Operation
+## Operation
 Run `satfs` in the foreground (with `-f`) or background (without).
 
 Logs go to stderr (if in foreground) and journald. Log level is adjusted in the configuration file.
@@ -145,7 +145,7 @@ This command uses FSUID/FSGID `1000/1000` to access `mountpoint` (which should b
 
 In this scenario, satfs will drop RUID/SUID to `999/999`.
 
-#### Using fstab
+## Using fstab
 
 To mount via `/etc/fstab`, add the following entry (remove `noauto` if you want to mount SatFS early):
 
@@ -155,15 +155,15 @@ none /mountpoint fuse.satfs noauto,fsuid=1000,fsgid=1000,conf=/path/to/your_conf
 
 In this example, dropuid/dropgid will be UID/GID of the `satfs` system user.
 
-#### Interactive popups (optional)
+## Interactive popups (optional)
 To enable communication with your desktop environment for interactive dialogs (see `ask:` in [CONFIG.md](CONFIG.md)), run the following command:
 
     xhost +SI:localuser:satfs
 
 Otherwise, if there is a `ask:` element in a rule and satfs can't create an interactive dialog on the desktop when this matches, then the request will be denied (`ask:` then behaves like `deny:`)
 
-## Security
-### Privilege management
+# Security
+## Privilege management
 
 This filesystem is designed to restrict access to private documents from unauthorized (non-root) applications.
 To prevent abuse — such as being killed by a process with the same UID — it must be started as root.
@@ -180,7 +180,7 @@ It drops all capabilities by default. If launched with `-o privileged`, it keeps
 Without `-o privileged`, if `readlink()` `/proc/PID/exe` fails (usually because you don't own the process) then it falls back to reading `/proc/PID/comm`. If the process's **ruid** differs from `fsuid`, the UID is appended in brackets, e.g., `comm[0]:sshd` would indicate `sshd` owned by `root`.
 
 
-### Security limitations
+## Security limitations
 
 This is **not** a bulletproof security solution and has several limitations:
 
@@ -192,7 +192,7 @@ This is **not** a bulletproof security solution and has several limitations:
 
 - **/proc/PID/exe abuse:** The satfs code is only triggered when a process tries to access a protected directory. This means that malicious code could `fork()` / `execve()` / etc. before a file access to mimic an authorized "init path". It comes with limitations though, but it is something to keep in mind. This could be mitigated by following execve() calls via e.g. eBPF and/or "registering" apps to satfs.
 
-## Use at your own risk
+# Use at your own risk
 
 While it can help restrict unauthorized access to private files, it has inherent limitations (see above).
 
