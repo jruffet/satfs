@@ -51,9 +51,9 @@ Rules define regex-based path matching and specify actions:
 When the configuration file changes (`mtime` update), SatFS reloads it automatically and prints a message in the logs.
 
 # Configuration
-See [CONFIG.md](CONFIG.md)
+SatFS uses a YAML configuration file.
 
-See also [examples](examples/conf)
+See [Configuration documentation](CONFIG.md) and [examples](examples/conf).
 
 # How to use
 
@@ -70,7 +70,7 @@ You can install dependencies via APT and then install `satfs` without dependenci
 
 ```sh
 sudo apt-get install -y python3-fuse python3-prctl python3-yaml python3-systemd
-sudo pip install --no-deps .
+sudo pip install --break-system-packages --no-deps .
 ```
 This installs `satfs` as a system-wide Python package and creates the `satfs` executable (typically in `/usr/local/bin/satfs`).
 
@@ -85,10 +85,10 @@ sudo pip install .
 
 The following FUSE options are enforced:
 
-- **nonempty:** Because the whole idea is to protect an existing directory.
+- **nonempty:** Because satfs protects an existing directory.
 - **default_permissions:** This ensures that the kernel checks permissions to avoid security risks.
 - **use_ino:** To show hardlinks correctly and not confuse tools relying on inodes.
-- **allow_other:** Since it effectively runs as the dedicated `satfs` user, this option allows access to the mountpoint by the user (which UID/GID will likely be the prodivided `-o fsuid/fsgid`)
+- **allow_other:** Since it effectively runs as the dedicated `satfs` user, this option allows access to the mountpoint by the end user (which UID/GID will likely be the prodivided via `-o fsuid/fsgid`)
 
 Consequently, `user_allow_other` must be set in `/etc/fuse.conf`
 
