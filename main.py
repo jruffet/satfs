@@ -17,7 +17,7 @@ from satfs.fuse import SatFS
 from satfs.config import config
 from satfs.satlog import logger
 
-SATFS_RELEASE = "0.1.0"
+SATFS_RELEASE = "0.1.1"
 MIN_FUSE_VERSION = (0, 2)
 MIN_PYTHON_VERSION = (3, 11)
 
