@@ -5,7 +5,6 @@ import yaml
 import fuse
 import re
 import pathlib
-import copy
 from typing import Optional, Tuple, Dict, List
 from itertools import chain
 from functools import cache
@@ -309,7 +308,7 @@ class Config:
             next_self["rules"].append(config_rule)
 
         # Only override the attributes that have been added in config_data
-        for key, value in copy.deepcopy(next_self).items():
+        for key, value in next_self.items():
             self.__dict__[key] = value
 
         satlog.set_config_name(self.name)
