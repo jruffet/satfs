@@ -16,17 +16,18 @@ class DesktopAdapter:
         self.desktop_env = None
 
     def pre_exec(self) -> None:
-        os.environ["HOME"] = "/dev/null"
-        os.environ["XDG_RUNTIME_DIR"] = "/dev/null"
-        # TODO: put those in config
-        os.environ["DISPLAY"] = ":0"
-        os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
         # fully drop to config.dropuid/gid
         set_privileges(
             uid=config.dropuid,
             gid=config.dropgid,
             caps=[],
         )
+        os.environ["HOME"] = "/dev/null"
+        os.environ["XDG_RUNTIME_DIR"] = "/dev/null"
+        # TODO: put those in config
+        os.environ["DISPLAY"] = ":0"
+        os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
+
         # Exit after ask_dialog_timeout seconds
         signal.alarm(config.ask_dialog_timeout)
 
