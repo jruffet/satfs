@@ -27,7 +27,7 @@ class DesktopAdapter:
         # TODO: put those in config
         os.environ["DISPLAY"] = ":0"
         os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
-
+        os.environ["DBUS_SESSION_BUS_ADDRESS"] = "none"
         # Exit after ask_dialog_timeout seconds
         signal.alarm(config.ask_dialog_timeout)
 
