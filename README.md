@@ -106,7 +106,7 @@ SatFS also provides command line options to specify the values for `dropuid` and
 2. **Providing arbitrary values:**
    Directly supply custom values for `dropuid` and `dropgid` in the command line.
 
-## Using the recommended dedicated satfs system user/group
+### Using the recommended dedicated satfs system user/group
 
 If you choose this method, create the `satfs` user and group with the following commands:
 
@@ -117,11 +117,11 @@ sudo useradd --system --gid satfs --shell /usr/sbin/nologin satfs
 
 In this case, there is no need to manually retrieve the uid and gid; if `dropuid` and `dropgid` are omitted, satfs will automatically use the `satfs` user's uid and gid.
 
-## Providing arbitrary values
+### Providing arbitrary values
 
 Alternatively, you can bypass creating the `satfs` user by specifying your own values for `dropuid` and `dropgid` directly as command line arguments.
 
-## Additional details
+### Additional details
 
 - If `dropuid` and `dropgid` are not explicitly provided, satfs defaults to using the uid and gid of the `satfs` user (which should have values less than 1000).
 - Ensure that your configuration file is readable by the user or group associated with these ids.
