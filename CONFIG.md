@@ -125,6 +125,8 @@ allow:<init_path_or_group>[UID]
 
 where `UID` is the FSUID provided in the configuration when starting the filesystem.
 
+`<init_path_or_group>` must match the following regex: `[a-zA-Z0-9_-]+`
+
 In permission rules, the special keyword **ANY** can be used. **ANY** represents any valid init_path, including those that are not explicitly defined in the configuration. For example, using `ANY` or `ANY[0]` grants permission based on any process execution chain, with the `[0]` indicating any process owned by root (UID 0).
 
 The following actions can be specified in permission rules:

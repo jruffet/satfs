@@ -187,6 +187,8 @@ class Config:
         if match:
             access, pure_ipn, uid = match.groups()
             return [f"{access}:{x}[{uid}]" for x in init_paths["groups"].get(pure_ipn, [pure_ipn])]
+        else:
+            raise ValueError(f"bad rule entry, (init_path/group must match [a-zA-Z0-9_]+): {ipn}")
 
     def reload_if_needed(self) -> None:
         try:
