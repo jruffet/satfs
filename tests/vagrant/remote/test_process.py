@@ -40,7 +40,7 @@ def test_mnt_ns():
     assert is_mount_private("/"), "Mount point '/' should be private"
 
 
-def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
+def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps, groups=None, environ=None):
     pid = os.getpid()
     with open(f"/proc/{pid}/status") as f:
         pid_status = f.readlines()
@@ -57,15 +57,27 @@ def validate_privileges(ruid, rgid, suid, sgid, euid, egid, fsuid, fsgid, caps):
     for cap in [x for x in prctl.ALL_CAP_NAMES if x not in lower_caps]:
         assert getattr(prctl.cap_effective, cap) is False, f"Capability '{cap}' should NOT be set"
 
+    if groups is not None:
+        assert os.getgroups() == groups
+
+    if environ is not None:
+        assert os.environ == environ
+
 
 @pytest.mark.parametrize(
-    "dropuid, dropgid, fsuid, fsgid, caps",
+    "dropuid, dropgid, fsuid, fsgid, caps, clear_groups, clear_environ",
     [
-        (999, 998, 1000, 1000, ["CAP_SYS_PTRACE"]),
-        (123, 345, 567, 789, ["CAP_CHOWN"]),
+        (999, 998, 1000, 1000, ["CAP_SYS_PTRACE"], True, True),
+        (123, 345, 567, 789, ["CAP_CHOWN"], True, True),
+        (123, 345, 567, 789, ["CAP_KILL"], False, True),
+        (123, 345, 567, 789, ["CAP_KILL"], False, False),
+        (123, 345, 567, 789, ["CAP_KILL"], True, False),
+        (123, 345, 567, 789, [], False, False),
     ],
 )
-def test_set_privileges(dropuid, dropgid, fsuid, fsgid, caps):
+def test_set_privileges(dropuid, dropgid, fsuid, fsgid, caps, clear_groups, clear_environ):
+    environ = os.environ if not clear_environ else {}
+
     process.set_privileges(
         ruid=dropuid,
         rgid=dropgid,
@@ -76,7 +88,12 @@ def test_set_privileges(dropuid, dropgid, fsuid, fsgid, caps):
         fsuid=fsuid,
         fsgid=fsgid,
         caps=caps,
+        clear_groups=clear_groups,
+        clear_environ=clear_environ,
     )
+
+    groups = os.getgroups() if not clear_groups else []
+
     validate_privileges(
         ruid=dropuid,
         rgid=dropgid,
@@ -87,6 +104,8 @@ def test_set_privileges(dropuid, dropgid, fsuid, fsgid, caps):
         fsuid=fsuid,
         fsgid=fsgid,
         caps=caps,
+        groups=groups,
+        environ=environ,
     )
 
 
@@ -110,6 +129,7 @@ def test_set_privileges_multiple():
         fsgid=fsgid,
         caps=satfs_caps,
         clear_groups=True,
+        clear_environ=True,
     )
     validate_privileges(
         ruid=dropuid,
@@ -121,6 +141,8 @@ def test_set_privileges_multiple():
         fsuid=fsuid,
         fsgid=fsgid,
         caps=satfs_caps,
+        groups=[],
+        environ={},
     )
 
     # config read
@@ -149,6 +171,8 @@ def test_set_privileges_multiple():
         fsuid=fsuid,
         fsgid=fsgid,
         caps=satfs_caps,
+        groups=[],
+        environ={},
     )
 
     # gui interactive dialog (after fork() in satfs)
@@ -156,6 +180,7 @@ def test_set_privileges_multiple():
         uid=dropuid,
         gid=dropgid,
         caps=[],
+        clear_environ=True,
     )
     # check forked process
     id = subprocess.run("id", capture_output=True)
@@ -170,6 +195,8 @@ def test_set_privileges_multiple():
         fsuid=dropuid,
         fsgid=dropgid,
         caps=[],
+        groups=[],
+        environ={},
     )
 
     with pytest.raises(PermissionError):

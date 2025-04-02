@@ -148,8 +148,9 @@ def main():
             process.set_privileges(
                 uid=config.dropuid,
                 gid=config.dropgid,
-                clear_groups=True,
                 caps=[],
+                clear_groups=True,
+                clear_environ=True,
             )
             time.sleep(5)
             sys.exit(1)
@@ -170,10 +171,11 @@ def main():
             rgid=config.dropgid,
             suid=config.dropuid,
             sgid=config.dropgid,
-            clear_groups=True,
             # keep CAP_SYS_PTRACE for now to be able to chdir() to the child's cwd in fsinit()
             # we will drop the capability in fsinit(), unless -o privileged
             caps=["CAP_SYS_PTRACE"],
+            clear_groups=True,
+            clear_environ=True,
         )
 
         # pre-flight check

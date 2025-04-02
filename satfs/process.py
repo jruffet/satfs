@@ -45,6 +45,7 @@ def set_privileges(
     fsgid: Optional[int] = None,
     caps: Optional[List[str]] = None,
     clear_groups: Optional[bool] = None,
+    clear_environ: Optional[bool] = None,
 ) -> None:
     """
     Sets user and group privileges for the current process
@@ -62,6 +63,7 @@ def set_privileges(
         fsgid: filesystem group ID to set
         caps: list of capability names to set in the effective capability set
         clear_groups: if true, clears all supplementary groups
+        clear_environ: if true, clears all environment variables
     """
 
     if uid is not None:
@@ -76,6 +78,9 @@ def set_privileges(
 
     if clear_groups is not None:
         os.setgroups([])
+
+    if clear_environ is not None:
+        os.environ.clear()
 
     if egid is not None:
         os.setegid(egid)
