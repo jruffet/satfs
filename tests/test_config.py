@@ -135,7 +135,7 @@ def run_bogus_config_test(setup, sub_from, sub_to, exception_type, error_str):
     path, _, config = setup
 
     raw_yaml = config.preprocess_config_yaml()
-    modified_yaml = re.sub(sub_from, sub_to, raw_yaml, flags=re.MULTILINE, count=1)
+    modified_yaml = re.sub(sub_from, sub_to, raw_yaml, flags=re.MULTILINE)
 
     with mock.patch("satfs.config.set_privileges", return_value=0):
         with mock.patch("satfs.config.Config.preprocess_config_yaml", return_value=modified_yaml):
@@ -149,8 +149,8 @@ def run_bogus_config_test(setup, sub_from, sub_to, exception_type, error_str):
     "sub_from, sub_to, exception_type, error_str",
     [
         pytest.param(
-            "mplayer:",
-            "bogus:",
+            "^    mplayer:",
+            "    bogus:",
             ValueError,
             "'mplayer' declared in group 'media_players' not in any init path",
             id="bad_group",
@@ -170,8 +170,8 @@ def run_bogus_config_test(setup, sub_from, sub_to, exception_type, error_str):
             id="bad_config_section",
         ),
         pytest.param(
-            "list_read:",
-            "bogus:",
+            "^  list_read:",
+            "  bogus:",
             ValueError,
             "Invalid perm 'list_read': not declared in 'perms' dict",
             id="bad_perm",
@@ -182,6 +182,13 @@ def run_bogus_config_test(setup, sub_from, sub_to, exception_type, error_str):
             ValueError,
             "'bogus' not in init_paths names",
             id="bad_init_path",
+        ),
+        pytest.param(
+            "vagrant_cat",
+            "vagrant/cat",
+            ValueError,
+            "bad rule entry",
+            id="bad_rule_entry",
         ),
         pytest.param(
             "^  log",
