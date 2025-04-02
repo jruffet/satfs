@@ -16,17 +16,19 @@ class DesktopAdapter:
         self.desktop_env = None
 
     def pre_exec(self) -> None:
-        # fully drop to config.dropuid/gid
+        # fully drop to dropuid/gid
         set_privileges(
             uid=config.dropuid,
             gid=config.dropgid,
             caps=[],
             clear_environ=True,
         )
+        # dbus won't work unless HOME can be written to
+        # and we wan't to have the smallest system footprint as possible
+        os.environ["DBUS_SESSION_BUS_ADDRESS"] = "none"
         # TODO: put those in config
         os.environ["DISPLAY"] = ":0"
         os.environ["XDG_CURRENT_DESKTOP"] = self.desktop_env
-        os.environ["DBUS_SESSION_BUS_ADDRESS"] = "none"
         # Exit after ask_dialog_timeout seconds
         signal.alarm(config.ask_dialog_timeout)
 
