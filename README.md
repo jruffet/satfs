@@ -14,7 +14,7 @@ This project is built on top of [`python-fuse`](https://github.com/libfuse/pytho
 
 ## Limitations
 
-- **Platform:** This is designed to work solely on Linux.
+- **Platform:** This is designed to work exclusively on Linux.
 - **Performance:** Due to FUSE, Python, and single-threading, this filesystem is pretty slow.
 - **Operation Support:** The filesystem supports most standard operations, but some features, such as extended attributes (`xattrs`), are not implemented.
 - **Security Considerations:** This filesystem is not a fully secure sandbox by any means. See [Security limitations](#security-limitations) for details.
